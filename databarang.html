@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Data Barang - Peminjaman TV</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{margin:10px;padding:10px;padding-bottom:50px;background:#f5f5f5;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;overflow-x:hidden}
+
+    /* ===== SIDEBAR ===== */
+    .sidebar{position:fixed;top:0;left:0;height:100vh;width:200px;background:linear-gradient(180deg,#1a237e 0%,#283593 100%);color:#fff;transition:all .3s;z-index:1000;box-shadow:3px 0 10px rgba(0,0,0,.2);overflow-y:auto}
+    .sidebar.collapsed{width:60px}
+    .sidebar-header{padding:20px 15px;text-align:center;border-bottom:1px solid rgba(255,255,255,.1)}
+    .sidebar-header h3{font-size:1.1rem;margin:0;color:#fff;font-weight:600}
+    .sidebar-header small{font-size:.55rem;color:#bbdefb}
+    .sidebar.collapsed .sidebar-header h3,.sidebar.collapsed .sidebar-header small{display:none}
+    .sidebar-menu{padding:20px 0;height:calc(100vh - 180px);overflow-y:auto}
+    .sidebar-menu::-webkit-scrollbar{width:4px}
+    .sidebar-menu::-webkit-scrollbar-thumb{background:rgba(255,255,255,.2);border-radius:10px}
+    .menu-item{padding:12px 20px;display:flex;align-items:center;color:#e3f2fd;text-decoration:none;transition:all .3s;border-left:3px solid transparent;cursor:pointer}
+    .menu-item:hover,.menu-item.active{background:rgba(255,255,255,.1);color:#fff;border-left:3px solid #4fc3f7}
+    .menu-item i{width:30px;font-size:1.2rem}
+    .menu-item span{font-size:.9rem;transition:opacity .3s,width .3s}
+    .sidebar.collapsed .menu-item span{opacity:0;width:0;overflow:hidden}
+    .menu-toggle{position:absolute;top:20px;right:-15px;width:30px;height:30px;background:#283593;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#fff;box-shadow:0 2px 5px rgba(0,0,0,.2);border:2px solid #fff;z-index:1001}
+    .user-info{position:absolute;bottom:0;left:0;right:0;padding:15px;background:rgba(0,0,0,.2);border-top:1px solid rgba(255,255,255,.1)}
+    .user-avatar{width:40px;height:40px;border-radius:50%;background:#4fc3f7;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1.1rem;flex-shrink:0}
+    .user-details h6{margin:0;font-size:.85rem;color:#fff}
+    .user-details small{font-size:.7rem;color:#bbdefb}
+    .sidebar.collapsed .user-details{display:none}
+    .role-badge{font-size:.65rem;padding:2px 8px;border-radius:10px;text-transform:uppercase;display:inline-block;color:#fff}
+    .role-admin{background:#f44336}.role-petugas{background:#ff9800}.role-peminjam{background:#4caf50}
+
+    /* ===== MAIN CONTENT ===== */
+    .main-content{margin-left:200px;min-height:100vh;transition:all .3s;padding:1px;background:linear-gradient(135deg,#f8f9fa 0%,#e9ecef 100%)}
+    .main-content.expanded{margin-left:60px}
+
+    /* ===== BADGE ===== */
+    .status-badge{padding:5px 10px;border-radius:20px;font-size:12px;font-weight:500;display:inline-block;min-width:80px;text-align:center;transition:all .3s}
+    .status-badge.tersedia{background:linear-gradient(135deg,#d4edda,#c3e6cb);color:#155724;border:1px solid #b1dfbb}
+    .status-badge.dipinjam{background:linear-gradient(135deg,#fff3cd,#ffeaa7);color:#856404;border:1px solid #ffeaa7}
+    .status-badge.rusak{background:linear-gradient(135deg,#f8d7da,#f5c6cb);color:#721c24;border:1px solid #f1b0b7}
+    .status-badge.hilang{background:linear-gradient(135deg,#d1ecf1,#bee5eb);color:#0c5460;border:1px solid #abdde5}
+
+    /* ===== ACTION BUTTONS ===== */
+    .action-buttons{display:flex;justify-content:center;gap:5px;flex-wrap:wrap}
+    .action-buttons .btn{padding:5px 10px;border-radius:6px;transition:all .3s;font-size:12px;font-weight:500;border:none}
+    .btn-info{background:linear-gradient(135deg,#17a2b8,#138496);color:#fff}
+    .btn-warning{background:linear-gradient(135deg,#ffc107,#e0a800);color:#212529}
+    .btn-danger{background:linear-gradient(135deg,#dc3545,#c82333);color:#fff}
+    .btn-info:hover,.btn-warning:hover,.btn-danger:hover{transform:translateY(-2px);box-shadow:0 4px 8px rgba(0,0,0,.2)}
+    .price{font-weight:700;color:#1a237e;font-size:14px}
+
+    /* ===== CONTAINER ===== */
+    .container-fluid{padding:25px 30px;width:100%;max-width:100%;margin:0}
+
+    /* ===== HEADER ===== */
+    .header-container{background:linear-gradient(135deg,#1a237e,#283593);color:#fff;padding:20px 25px;border-radius:12px;margin-bottom:25px;box-shadow:0 4px 20px rgba(26,35,126,.2);position:relative;overflow:hidden;display:flex;justify-content:space-between;align-items:center}
+    .header-container::before{content:'';position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,#4fc3f7,#29b6f6)}
+    .page-title{margin:0;font-size:1.8rem;font-weight:700;letter-spacing:.5px;position:relative;z-index:1}
+
+    /* ===== CARD ===== */
+    .card{border:none;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,.08);margin-bottom:20px;background:#fff;overflow:hidden;transition:all .3s}
+    .card:hover{transform:translateY(-2px);box-shadow:0 6px 25px rgba(0,0,0,.12)}
+
+    /* ===== FILTER ===== */
+    .filter-form .form-control,.filter-form .form-select{border-radius:10px;border:1px solid #e0e0e0;padding:10px 15px;font-size:14px;transition:all .3s;height:45px}
+    .filter-form .form-control:focus,.filter-form .form-select:focus{border-color:#4fc3f7;box-shadow:0 0 0 3px rgba(79,195,247,.2);outline:none}
+    .filter-form .btn-primary{border-radius:10px;padding:10px 20px;font-weight:600;background:linear-gradient(135deg,#4fc3f7,#29b6f6);border:none;transition:all .3s;height:45px}
+    .filter-form .btn-primary:hover{background:linear-gradient(135deg,#29b6f6,#039be5);transform:translateY(-2px);box-shadow:0 4px 12px rgba(41,182,246,.3)}
+
+    /* ===== TABLE ===== */
+    .table-responsive{width:100%;border-radius:12px;overflow-x:auto;border:1px solid #e0e0e0;box-shadow:0 2px 10px rgba(0,0,0,.05)}
+    .table{width:100%;margin-bottom:0;border-collapse:separate;border-spacing:0;min-width:1200px}
+    .table th{background:linear-gradient(135deg,#343a40,#212529);color:#fff;border:none;padding:15px 12px;font-weight:600;text-align:center;white-space:nowrap;font-size:14px}
+    .table th:first-child{border-radius:12px 0 0 0}
+    .table th:last-child{border-radius:0 12px 0 0}
+    .table td{padding:12px 10px;text-align:center;vertical-align:middle;border-bottom:1px solid #f0f0f0;font-size:14px}
+    .table td:nth-child(3){text-align:left;font-weight:500;color:#333}
+    .table td:nth-child(4){text-align:left}
+    .table tbody tr:nth-child(even){background-color:#fafafa}
+    .table tbody tr:hover{background-color:#f0f7ff;transition:background-color .2s}
+    .badge.bg-secondary{background:linear-gradient(135deg,#6c757d,#545b62)!important;padding:6px 12px;border-radius:20px;font-weight:600;font-size:12px}
+    .barang-foto{width:120px;height:70px;object-fit:cover;border-radius:10px;border:2px solid #e0e0e0;transition:all .3s;background:#f8f9fa;cursor:zoom-in}
+    .barang-foto:hover{transform:scale(2.5);z-index:100;box-shadow:0 4px 15px rgba(0,0,0,.3);position:relative}
+    .no-foto{width:60px;height:60px;background:#f8f9fa;border:2px dashed #e0e0e0;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#999;font-size:24px;margin:0 auto}
+    .deskripsi-text{max-width:250px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#666}
+
+    /* ===== MODAL ===== */
+    .modal-header{background:linear-gradient(135deg,#1a237e,#283593);color:#fff;border-radius:10px 10px 0 0;padding:15px 20px}
+    .modal-header .btn-close{filter:brightness(0) invert(1)}
+    .modal-title{font-weight:600}
+    .modal-body{padding:20px;background:#fafafa;max-height:70vh;overflow-y:auto}
+    .empty-state{padding:50px 20px;text-align:center}
+    .empty-state i{font-size:64px;color:#ccc;margin-bottom:15px;display:block}
+    .empty-state h5{color:#666;margin-bottom:10px;font-weight:600}
+    .empty-state p{color:#999;margin-bottom:20px}
+    .detail-row{display:flex;margin-bottom:15px;padding-bottom:10px;border-bottom:1px solid #eee}
+    .detail-label{width:140px;font-weight:600;color:#495057;flex-shrink:0}
+    .detail-value{flex:1;color:#212529}
+    .detail-value.price{color:#1a237e;font-weight:700}
+
+    /* ===== TOAST ===== */
+    .toast-container{position:fixed;top:20px;right:20px;z-index:9999}
+    .toast-custom{padding:15px 20px;border-radius:10px;color:#fff;margin-bottom:10px;box-shadow:0 4px 15px rgba(0,0,0,.2);animation:slideIn .3s ease;display:flex;align-items:center;gap:10px;min-width:300px}
+    .toast-custom.success{background:linear-gradient(135deg,#27ae60,#229954)}
+    .toast-custom.danger{background:linear-gradient(135deg,#dc3545,#c82333)}
+    @keyframes slideIn{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}
+    @keyframes slideOut{from{transform:translateX(0);opacity:1}to{transform:translateX(100%);opacity:0}}
+
+    /* ===== SCROLLBAR ===== */
+    ::-webkit-scrollbar{width:8px;height:8px}
+    ::-webkit-scrollbar-track{background:#f1f1f1;border-radius:10px}
+    ::-webkit-scrollbar-thumb{background:#3498db;border-radius:10px}
+    ::-webkit-scrollbar-thumb:hover{background:#2980b9}
+
+    /* ===== RESPONSIVE ===== */
+    @media(max-width:992px){
+        .sidebar{width:60px}
+        .sidebar:not(.collapsed){width:250px}
+        .main-content{margin-left:60px}
+        .sidebar:not(.collapsed)~.main-content{margin-left:250px}
+        .menu-toggle{right:-12px}
+    }
+    @media(max-width:768px){
+        .container-fluid{padding:15px 10px}
+        .header-container{flex-direction:column;gap:15px;align-items:flex-start}
+        .page-title{font-size:1.3rem}
+        .btn-light{padding:8px 16px;font-size:14px;width:100%}
+        .filter-form .col-md-8,.filter-form .col-md-2{width:100%}
+        .barang-foto:hover{transform:scale(1.5)}
+    }
+    @media(max-width:576px){
+        .status-badge{min-width:70px;padding:3px 8px;font-size:11px}
+        .price{font-size:12px}
+        .action-buttons .btn{padding:4px 8px;font-size:11px}
+        .deskripsi-text{max-width:120px}
+    }
+</style>
+</head>
+<body>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- ===== SIDEBAR ===== -->
+<div class="sidebar" id="sidebar">
+    <div class="menu-toggle" onclick="toggleSidebar()">
+        <i class="bi bi-chevron-left" id="toggleIcon"></i>
+    </div>
+    <div class="sidebar-header">
+        <h3><i class="bi bi-tv me-2"></i>Peminjaman TV</h3>
+        <small>Sistem Management</small>
+    </div>
+    <div class="sidebar-menu">
+        <a href="index1.html" class="menu-item" id="menu-index">
+            <i class="bi bi-speedometer2"></i><span>Dashboard</span>
+        </a>
+        <a href="databarang.html" class="menu-item" id="menu-databarang">
+            <i class="bi bi-tv"></i><span>Data Barang</span>
+        </a>
+        <a href="peminjaman.html" class="menu-item" onclick="showToast('danger','Halaman lain hanya tersedia di versi PHP')">
+            <i class="bi bi-cart-check"></i><span>Peminjaman</span>
+        </a>
+        <a href="laporan.html" class="menu-item" onclick="showToast('danger','Halaman lain hanya tersedia di versi PHP')">
+            <i class="bi bi-file-earmark-text"></i><span>Laporan</span>
+        </a>
+        <a href="manajemenuser.html" class="menu-item" onclick="showToast('danger','Halaman lain hanya tersedia di versi PHP')">
+            <i class="bi bi-people"></i><span>Manajemen User</span>
+        </a>
+
+    </div>
+    <div class="user-info">
+        <div class="d-flex align-items-center">
+            <div class="user-avatar me-3">R</div>
+            <div class="user-details">
+                <h6>Rayhan Fadhil N</h6>
+                <small><span class="role-badge role-admin">Admin</span></small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ===== MAIN CONTENT ===== -->
+<div class="main-content" id="mainContent">
+    <div class="container-fluid">
+
+        <!-- Header -->
+        <div class="header-container">
+            <h2 class="page-title text-white">
+                <i class="bi bi-tv me-2"></i>Data Barang
+            </h2>
+            <button class="btn btn-light" onclick="openAddModal()">
+                <i class="bi bi-plus-circle me-1"></i>Tambah Barang
+            </button>
+        </div>
+
+        <!-- Filter -->
+        <div class="card">
+            <div class="card-body">
+                <div class="row g-3 filter-form">
+                    <div class="col-md-8">
+                        <div class="input-group">
+                            <span class="input-group-text bg-white border-end-0">
+                                <i class="bi bi-search text-muted"></i>
+                            </span>
+                            <input type="text" class="form-control border-start-0" id="searchInput" 
+                                   placeholder="Cari barang (nama/deskripsi)..."
+                                   oninput="renderTable()">
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <select class="form-select" id="statusFilter" onchange="renderTable()">
+                            <option value="">Semua Status</option>
+                            <option value="tersedia">Tersedia</option>
+                            <option value="dipinjam">Dipinjam</option>
+                            <option value="rusak">Rusak</option>
+                            <option value="hilang">Hilang</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <button class="btn btn-primary w-100" onclick="renderTable()">
+                            <i class="bi bi-funnel me-1"></i>Filter
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Data Table -->
+        <div class="card mt-4">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th width="5%">No</th>
+                                <th width="8%">Foto</th>
+                                <th width="15%">Nama Barang</th>
+                                <th width="20%">Deskripsi</th>
+                                <th width="12%">Harga/Jam</th>
+                                <th width="8%">Stok</th>
+                                <th width="10%">Status</th>
+                                <th width="22%">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- View Modal -->
+<div class="modal fade" id="viewModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-info-circle me-2"></i>Detail Barang</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="viewContent"></div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Tutup</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Modal -->
+<div class="modal fade" id="addModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-plus-circle me-2"></i>Tambah Barang Baru</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="addForm" onsubmit="return addBarang(event)">
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-md-12">
+                            <label class="form-label fw-bold">Nama Barang <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="addNama" required placeholder="Contoh: TV LED 32 inch" maxlength="100">
+                        </div>
+                        <div class="col-md-12">
+                            <label class="form-label fw-bold">Deskripsi</label>
+                            <textarea class="form-control" id="addDeskripsi" rows="3" placeholder="Deskripsi barang..." maxlength="255"></textarea>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Harga per Jam <span class="text-danger">*</span></label>
+                            <div class="input-group">
+                                <span class="input-group-text">Rp</span>
+                                <input type="number" class="form-control" id="addHarga" min="0" required placeholder="5000">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Stok <span class="text-danger">*</span></label>
+                            <input type="number" class="form-control" id="addStok" min="1" required placeholder="10">
+                        </div>
+                        <div class="col-md-12">
+                            <label class="form-label fw-bold">Status</label>
+                            <select class="form-select" id="addStatus">
+                                <option value="tersedia">Tersedia</option>
+                                <option value="dipinjam">Dipinjam</option>
+                                <option value="rusak">Rusak</option>
+                                <option value="hilang">Hilang</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-primary"><i class="bi bi-save me-1"></i>Simpan Barang</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Modal -->
+<div class="modal fade" id="editModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-pencil me-2"></i>Edit Barang</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="editForm" onsubmit="return updateBarang(event)">
+                <input type="hidden" id="editId">
+                <div class="modal-body" id="editContent"></div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-primary"><i class="bi bi-save me-1"></i>Update Barang</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title"><i class="bi bi-exclamation-triangle me-2"></i>Konfirmasi Hapus</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center py-4">
+                <i class="bi bi-trash text-danger" style="font-size:64px"></i>
+                <h5 class="mt-3" id="deleteName">Apakah Anda yakin ingin menghapus barang ini?</h5>
+                <p class="text-muted mb-0">Data yang dihapus tidak dapat dikembalikan!</p>
+            </div>
+            <form id="deleteForm" onsubmit="return deleteBarang(event)">
+                <input type="hidden" id="deleteId">
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-danger"><i class="bi bi-trash me-1"></i>Ya, Hapus</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<footer style="position:fixed;bottom:0;left:0;width:100%;background:linear-gradient(90deg,#5c47ff,#6a5cff);color:#fff;text-align:center;padding:8px 0;font-size:11px;z-index:999;box-shadow:0 -2px 10px rgba(0,0,0,.1)">
+    © 2026 Dibuat dengan <i class="fas fa-heart" style="color:#ff6b6b;margin:0 3px"></i> oleh <span class="fw-semibold">Rayhan Fadhil N</span>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+// ============================================================
+// SIDEBAR
+// ============================================================
+function toggleSidebar(){
+    const s=document.getElementById('sidebar'),m=document.getElementById('mainContent'),i=document.getElementById('toggleIcon');
+    s.classList.toggle('collapsed');m.classList.toggle('expanded');
+    i.className=s.classList.contains('collapsed')?'bi bi-chevron-right':'bi bi-chevron-left';
+    localStorage.setItem('sidebarCollapsed',s.classList.contains('collapsed'));
+}
+
+// ============================================================
+// DATA AWAL (dari SQL dump)
+// ============================================================
+const DEFAULT_DATA = [
+    {id_barang:23, nama_barang:"TV 14 Inch", deskripsi:"TV tabung 14 inch klasik, cocok untuk kebutuhan dasar", harga_per_jam:3000, stok:24, foto:"", status:"tersedia", created_at:"2026-03-02 07:00:38"},
+    {id_barang:24, nama_barang:"TV 21 Inch", deskripsi:"TV tabung 21 inch, layar lebih lebar untuk menonton", harga_per_jam:4000, stok:24, foto:"", status:"tersedia", created_at:"2026-03-02 07:00:38"},
+    {id_barang:25, nama_barang:"TV 32 Inch", deskripsi:"TV LED 32 inch HD, hemat energi dan ringan", harga_per_jam:5000, stok:24, foto:"", status:"tersedia", created_at:"2026-03-02 07:00:38"},
+    {id_barang:26, nama_barang:"TV 42 Inch", deskripsi:"TV LED 42 inch Full HD, cocok untuk ruang sedang", harga_per_jam:7000, stok:25, foto:"", status:"tersedia", created_at:"2026-03-02 07:00:38"},
+    {id_barang:27, nama_barang:"TV 55 Inch", deskripsi:"TV Smart 55 Inch 4K UHD, fitur lengkap dengan WiFi", harga_per_jam:10000, stok:25, foto:"", status:"tersedia", created_at:"2026-03-02 07:00:38"},
+    {id_barang:28, nama_barang:"Remote TV Universal", deskripsi:"Remote TV universal untuk semua merek", harga_per_jam:2000, stok:25, foto:"", status:"tersedia", created_at:"2026-03-02 07:00:38"},
+    {id_barang:29, nama_barang:"Kabel HDMI 1.5m", deskripsi:"Kabel HDMI High Speed 1.5 meter", harga_per_jam:2500, stok:24, foto:"", status:"tersedia", created_at:"2026-03-02 07:00:38"},
+    {id_barang:30, nama_barang:"Kabel HDMI 3m", deskripsi:"Kabel HDMI High Speed 3 meter untuk jarak jauh", harga_per_jam:3000, stok:24, foto:"", status:"tersedia", created_at:"2026-03-02 07:00:38"},
+    {id_barang:31, nama_barang:"Bracket TV 32-42 Inch", deskripsi:"Bracket dinding fixed untuk TV 32-42 inch", harga_per_jam:4000, stok:25, foto:"", status:"tersedia", created_at:"2026-03-02 07:00:38"},
+    {id_barang:32, nama_barang:"Bracket TV 50-65 Inch", deskripsi:"Bracket dinding tilt untuk TV 50-65 inch", harga_per_jam:5000, stok:25, foto:"", status:"tersedia", created_at:"2026-03-02 07:00:38"}
+];
+
+// ============================================================
+// STORAGE
+// ============================================================
+function getBarang(){
+    const data=localStorage.getItem('barang_tv');
+    if(data)return JSON.parse(data);
+    localStorage.setItem('barang_tv',JSON.stringify(DEFAULT_DATA));
+    return DEFAULT_DATA;
+}
+function saveBarang(arr){localStorage.setItem('barang_tv',JSON.stringify(arr))}
+function getNextId(){const d=getBarang();if(d.length===0)return 1;return Math.max(...d.map(x=>x.id_barang))+1}
+
+// ============================================================
+// TOAST
+// ============================================================
+function showToast(type,text){
+    const c=document.getElementById('toastContainer');
+    const icon=type==='success'?'bi-check-circle-fill':'bi-exclamation-triangle-fill';
+    const t=document.createElement('div');t.className='toast-custom '+type;
+    t.innerHTML='<i class="bi '+icon+'" style="font-size:20px"></i><span>'+text+'</span>';
+    c.appendChild(t);setTimeout(()=>{t.style.animation='slideOut .3s ease forwards';setTimeout(()=>t.remove(),300)},3000);
+}
+
+// ============================================================
+// RENDER TABLE
+// ============================================================
+function renderTable(){
+    const search=document.getElementById('searchInput').value.toLowerCase();
+    const statusVal=document.getElementById('statusFilter').value;
+    let data=getBarang();
+    if(search){data=data.filter(d=>d.nama_barang.toLowerCase().includes(search)||(d.deskripsi&&d.deskripsi.toLowerCase().includes(search)))}
+    if(statusVal){data=data.filter(d=>d.status===statusVal)}
+    data.sort((a,b)=>new Date(b.created_at)-new Date(a.created_at));
+    const tbody=document.getElementById('tableBody');
+    if(data.length===0){
+        tbody.innerHTML='<tr><td colspan="8" class="empty-state"><i class="bi bi-inbox"></i><h5>Tidak ada data barang</h5><p>Silakan tambah barang baru atau ubah filter pencarian</p><button class="btn btn-primary" onclick="openAddModal()"><i class="bi bi-plus-circle me-1"></i>Tambah Barang</button></td></tr>';
+        return;
+    }
+    let html='';let no=1;
+    data.forEach(d=>{
+        const sc=d.status||'tersedia';const sl=sc.charAt(0).toUpperCase()+sc.slice(1);
+        html+='<tr><td>'+(no++)+'</td><td><div class="no-foto"><i class="bi bi-image"></i></div></td><td>'+escHtml(d.nama_barang)+'</td><td><div class="deskripsi-text" title="'+escHtml(d.deskripsi||'')+'">'+escHtml(d.deskripsi||'-')+'</div></td><td class="price">Rp '+formatRp(d.harga_per_jam)+'</td><td><span class="badge bg-secondary">'+(d.stok||0)+'</span></td><td><span class="status-badge '+sc+'">'+sl+'</span></td><td><div class="action-buttons"><button class="btn btn-sm btn-info" onclick="viewBarang('+d.id_barang+')" title="Lihat Detail"><i class="bi bi-eye"></i> <span class="d-none d-md-inline">Detail</span></button><button class="btn btn-sm btn-warning" onclick="openEditModal('+d.id_barang+')" title="Edit"><i class="bi bi-pencil"></i> <span class="d-none d-md-inline">Edit</span></button><button class="btn btn-sm btn-danger" onclick="openDeleteModal('+d.id_barang+')" title="Hapus"><i class="bi bi-trash"></i> <span class="d-none d-md-inline">Hapus</span></button></div></td></tr>';
+    });
+    tbody.innerHTML=html;
+}
+
+// ============================================================
+// HELPER
+// ============================================================
+function escHtml(s){if(!s)return'';const d=document.createElement('div');d.textContent=s;return d.innerHTML}
+function formatRp(n){return(parseInt(n)||0).toLocaleString('id-ID')}
+function formatTanggal(ds){if(!ds)return'-';const d=new Date(ds);const b=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];return d.getDate()+' '+b[d.getMonth()]+' '+d.getFullYear()+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')}
+function findById(id){return getBarang().find(d=>d.id_barang===parseInt(id))}
+
+// ============================================================
+// VIEW
+// ============================================================
+function viewBarang(id){
+    const d=findById(id);if(!d){showToast('danger','Barang tidak ditemukan');return}
+    const sc=d.status||'tersedia';const sl=sc.charAt(0).toUpperCase()+sc.slice(1);
+    document.getElementById('viewContent').innerHTML='<div class="container-fluid"><div class="row"><div class="col-md-5 text-center mb-4"><div class="bg-light rounded d-flex align-items-center justify-content-center" style="height:250px"><div class="text-center"><i class="bi bi-image text-muted" style="font-size:64px"></i><p class="text-muted mt-2">Tidak ada foto</p></div></div></div><div class="col-md-7"><h4 class="mb-3">'+escHtml(d.nama_barang)+'</h4><div class="detail-row"><span class="detail-label"><i class="bi bi-tag me-2"></i>ID Barang</span><span class="detail-value">: '+d.id_barang+'</span></div><div class="detail-row"><span class="detail-label"><i class="bi bi-card-text me-2"></i>Deskripsi</span><span class="detail-value">: '+escHtml(d.deskripsi||'-')+'</span></div><div class="detail-row"><span class="detail-label"><i class="bi bi-currency-dollar me-2"></i>Harga per Jam</span><span class="detail-value price">: Rp '+formatRp(d.harga_per_jam)+'</span></div><div class="detail-row"><span class="detail-label"><i class="bi bi-box me-2"></i>Stok</span><span class="detail-value">: <span class="badge bg-secondary">'+(d.stok||0)+'</span></span></div><div class="detail-row"><span class="detail-label"><i class="bi bi-info-circle me-2"></i>Status</span><span class="detail-value">: <span class="status-badge '+sc+'">'+sl+'</span></span></div><div class="detail-row"><span class="detail-label"><i class="bi bi-calendar me-2"></i>Ditambahkan</span><span class="detail-value">: '+formatTanggal(d.created_at)+'</span></div></div></div></div>';
+    new bootstrap.Modal(document.getElementById('viewModal')).show();
+}
+
+// ============================================================
+// ADD
+// ============================================================
+function openAddModal(){document.getElementById('addForm').reset();new bootstrap.Modal(document.getElementById('addModal')).show()}
+function addBarang(e){
+    e.preventDefault();
+    const nama=document.getElementById('addNama').value.trim();
+    const deskripsi=document.getElementById('addDeskripsi').value.trim();
+    const harga=parseInt(document.getElementById('addHarga').value)||0;
+    const stok=parseInt(document.getElementById('addStok').value)||0;
+    const status=document.getElementById('addStatus').value;
+    if(!nama){showToast('danger','Nama barang wajib diisi');return false}
+    if(harga<=0){showToast('danger','Harga harus lebih dari 0');return false}
+    if(stok<1){showToast('danger','Stok minimal 1');return false}
+    const data=getBarang();
+    data.push({id_barang:getNextId(),nama_barang:nama,deskripsi:deskripsi,harga_per_jam:harga,stok:stok,foto:'',status:status,created_at:new Date().toISOString().replace('T',' ').slice(0,19)});
+    saveBarang(data);
+    bootstrap.Modal.getInstance(document.getElementById('addModal')).hide();
+    showToast('success','Barang berhasil ditambah');renderTable();return false;
+}
+
+// ============================================================
+// EDIT
+// ============================================================
+function openEditModal(id){
+    const d=findById(id);if(!d){showToast('danger','Barang tidak ditemukan');return false}
+    document.getElementById('editId').value=d.id_barang;
+    let opts=['tersedia','dipinjam','rusak','hilang'].map(s=>'<option value="'+s+'"'+(d.status===s?' selected':'')+'>'+s.charAt(0).toUpperCase()+s.slice(1)+'</option>').join('');
+    document.getElementById('editContent').innerHTML='<div class="row g-3"><div class="col-md-12"><label class="form-label fw-bold">Nama Barang <span class="text-danger">*</span></label><input type="text" class="form-control" id="editNama" value="'+escHtml(d.nama_barang)+'" required maxlength="100"></div><div class="col-md-12"><label class="form-label fw-bold">Deskripsi</label><textarea class="form-control" id="editDeskripsi" rows="3">'+escHtml(d.deskripsi||'')+'</textarea></div><div class="col-md-6"><label class="form-label fw-bold">Harga per Jam <span class="text-danger">*</span></label><div class="input-group"><span class="input-group-text">Rp</span><input type="number" class="form-control" id="editHarga" value="'+(d.harga_per_jam||0)+'" min="0" required></div></div><div class="col-md-6"><label class="form-label fw-bold">Stok <span class="text-danger">*</span></label><input type="number" class="form-control" id="editStok" value="'+(d.stok||0)+'" min="0" required></div><div class="col-md-12"><label class="form-label fw-bold">Status</label><select class="form-select" id="editStatus">'+opts+'</select></div><div class="col-md-12"><div class="alert alert-info"><i class="bi bi-info-circle me-2"></i><strong>Info:</strong> Field dengan tanda <span class="text-danger">*</span> wajib diisi.</div></div></div>';
+    new bootstrap.Modal(document.getElementById('editModal')).show();
+}
+function updateBarang(e){
+    e.preventDefault();
+    const id=parseInt(document.getElementById('editId').value);
+    const nama=document.getElementById('editNama').value.trim();
+    const deskripsi=document.getElementById('editDeskripsi').value.trim();
+    const harga=parseInt(document.getElementById('editHarga').value)||0;
+    const stok=parseInt(document.getElementById('editStok').value)||0;
+    const status=document.getElementById('editStatus').value;
+    if(!nama){showToast('danger','Nama barang wajib diisi');return false}
+    if(harga<=0){showToast('danger','Harga harus lebih dari 0');return false}
+    let data=getBarang();const idx=data.findIndex(d=>d.id_barang===id);
+    if(idx===-1){showToast('danger','Barang tidak ditemukan');return false}
+    data[idx].nama_barang=nama;data[idx].deskripsi=deskripsi;data[idx].harga_per_jam=harga;data[idx].stok=stok;data[idx].status=status;
+    saveBarang(data);
+    bootstrap.Modal.getInstance(document.getElementById('editModal')).hide();
+    showToast('success','Barang berhasil diupdate');renderTable();return false;
+}
+
+// ============================================================
+// DELETE
+// ============================================================
+function openDeleteModal(id){
+    const d=findById(id);if(!d){showToast('danger','Barang tidak ditemukan');return}
+    document.getElementById('deleteId').value=d.id_barang;
+    document.getElementById('deleteName').innerHTML='Apakah Anda yakin ingin menghapus<br><strong>"'+escHtml(d.nama_barang)+'"</strong>?';
+    new bootstrap.Modal(document.getElementById('deleteModal')).show();
+}
+function deleteBarang(e){
+    e.preventDefault();
+    const id=parseInt(document.getElementById('deleteId').value);
+    let data=getBarang();const idx=data.findIndex(d=>d.id_barang===id);
+    if(idx===-1){showToast('danger','Barang tidak ditemukan');return false}
+    data.splice(idx,1);saveBarang(data);
+    bootstrap.Modal.getInstance(document.getElementById('deleteModal')).hide();
+    showToast('success','Barang berhasil dihapus');renderTable();return false;
+}
+
+// ============================================================
+// INIT
+// ============================================================
+document.addEventListener('DOMContentLoaded',function(){
+    // Sidebar state
+    if(localStorage.getItem('sidebarCollapsed')==='true'){
+        document.getElementById('sidebar').classList.add('collapsed');
+        document.getElementById('mainContent').classList.add('expanded');
+        document.getElementById('toggleIcon').className='bi bi-chevron-right';
+    }
+    if(window.innerWidth<=992){
+        document.getElementById('sidebar').classList.add('collapsed');
+        document.getElementById('mainContent').classList.add('expanded');
+        document.getElementById('toggleIcon').className='bi bi-chevron-right';
+    }
+    window.addEventListener('resize',function(){
+        if(window.innerWidth<=992){
+            document.getElementById('sidebar').classList.add('collapsed');
+            document.getElementById('mainContent').classList.add('expanded');
+            document.getElementById('toggleIcon').className='bi bi-chevron-right';
+        }
+    });
+
+    // Active menu
+    const page=window.location.pathname.split('/').pop()||'index.html';
+    document.querySelectorAll('.menu-item').forEach(item=>item.classList.remove('active'));
+    const target=document.getElementById('menu-'+page.replace('.html',''));
+    if(target)target.classList.add('active');
+
+    // Render
+    renderTable();
+
+    // Modal reset
+    document.querySelectorAll('.modal').forEach(modal=>{
+        modal.addEventListener('hidden.bs.modal',function(){const f=this.querySelector('form');if(f)f.reset()});
+    });
+});
+</script>
+</body>
+</html>

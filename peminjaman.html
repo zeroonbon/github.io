@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Data Peminjaman - Peminjaman TV</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{background:#f5f5f5;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;overflow-x:hidden}
+
+    .sidebar{position:fixed;top:0;left:0;height:100vh;width:200px;background:linear-gradient(180deg,#1a237e,#283593);color:#fff;transition:all .3s;z-index:1000;box-shadow:3px 0 10px rgba(0,0,0,.2);overflow-y:auto}
+    .sidebar.collapsed{width:60px}
+    .sidebar-header{padding:20px 15px;text-align:center;border-bottom:1px solid rgba(255,255,255,.1)}
+    .sidebar-header h3{font-size:1.1rem;margin:0;color:#fff;font-weight:600}
+    .sidebar-header small{font-size:.55rem;color:#bbdefb}
+    .sidebar.collapsed .sidebar-header h3,.sidebar.collapsed .sidebar-header small{display:none}
+    .sidebar-menu{padding:20px 0;height:calc(100vh - 180px);overflow-y:auto}
+    .sidebar-menu::-webkit-scrollbar{width:4px}
+    .sidebar-menu::-webkit-scrollbar-thumb{background:rgba(255,255,255,.2);border-radius:10px}
+    .menu-item{padding:12px 20px;display:flex;align-items:center;color:#e3f2fd;text-decoration:none;transition:all .3s;border-left:3px solid transparent;cursor:pointer}
+    .menu-item:hover,.menu-item.active{background:rgba(255,255,255,.1);color:#fff;border-left:3px solid #4fc3f7}
+    .menu-item i{width:30px;font-size:1.2rem}
+    .menu-item span{font-size:.9rem;transition:opacity .3s,width .3s}
+    .sidebar.collapsed .menu-item span{opacity:0;width:0;overflow:hidden}
+    .menu-toggle{position:absolute;top:20px;right:-15px;width:30px;height:30px;background:#283593;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#fff;box-shadow:0 2px 5px rgba(0,0,0,.2);border:2px solid #fff;z-index:1001}
+    .user-info{position:absolute;bottom:0;left:0;right:0;padding:15px;background:rgba(0,0,0,.2);border-top:1px solid rgba(255,255,255,.1)}
+    .user-avatar{width:40px;height:40px;border-radius:50%;background:#4fc3f7;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1.1rem;flex-shrink:0}
+    .user-details h6{margin:0;font-size:.85rem;color:#fff}
+    .user-details small{font-size:.7rem;color:#bbdefb}
+    .sidebar.collapsed .user-details{display:none}
+    .role-badge{font-size:.65rem;padding:2px 8px;border-radius:10px;text-transform:uppercase;display:inline-block;color:#fff}
+    .role-admin{background:#f44336}
+
+    .main-content{margin-left:200px;min-height:100vh;transition:all .3s;padding:25px 30px 50px;background:linear-gradient(135deg,#f8f9fa,#e9ecef)}
+    .main-content.expanded{margin-left:60px}
+
+    .header-container{background:linear-gradient(135deg,#1a237e,#283593);color:#fff;padding:20px 25px;border-radius:12px;margin-bottom:25px;box-shadow:0 4px 20px rgba(26,35,126,.2);position:relative;overflow:hidden;display:flex;justify-content:space-between;align-items:center}
+    .header-container::before{content:'';position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,#4fc3f7,#29b6f6)}
+    .page-title{margin:0;font-size:1.8rem;font-weight:700;letter-spacing:.5px;position:relative;z-index:1}
+    .header-container .btn-light{border-radius:10px;font-weight:600;padding:10px 24px;transition:all .3s}
+    .header-container .btn-light:hover{transform:translateY(-2px);box-shadow:0 4px 15px rgba(255,255,255,.3)}
+
+    .card{border:none;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,.08);margin-bottom:20px;background:#fff;overflow:hidden}
+    .filter-form .form-control,.filter-form .form-select{border-radius:10px;border:1px solid #e0e0e0;padding:12px 18px;font-size:14px;transition:all .3s}
+    .filter-form .form-control:focus{border-color:#4fc3f7;box-shadow:0 0 0 3px rgba(79,195,247,.2);outline:none}
+    .filter-form .btn{border-radius:10px;padding:12px 24px;font-weight:600;background:linear-gradient(135deg,#4fc3f7,#29b6f6);border:none;transition:all .3s}
+    .filter-form .btn:hover{background:linear-gradient(135deg,#29b6f6,#039be5);transform:translateY(-2px);box-shadow:0 4px 12px rgba(41,182,246,.3)}
+
+    .table-responsive{border-radius:12px;overflow:hidden;border:1px solid #e0e0e0;box-shadow:0 2px 10px rgba(0,0,0,.05)}
+    .table{width:100%;margin-bottom:0}
+    .table th{background:linear-gradient(135deg,#343a40,#212529);color:#fff;border:none;padding:14px 12px;font-weight:600;text-align:center;white-space:nowrap;font-size:13px}
+    .table td{padding:12px 10px;text-align:center;vertical-align:middle;border-bottom:1px solid #f0f0f0;font-size:13px}
+    .table td:nth-child(2){text-align:left;font-weight:500;color:#333}
+    .table tbody tr:nth-child(even){background-color:#fafafa}
+    .table tbody tr:hover{background-color:#e8f4fd}
+
+    .statuss-badge{padding:5px 12px;border-radius:20px;font-size:11px;font-weight:600;display:inline-block;min-width:80px;text-align:center;letter-spacing:.3px}
+    .pending{background:linear-gradient(135deg,#fff3cd,#ffeaa7);color:#856404;border:1px solid #ffeeba}
+    .disetujui{background:linear-gradient(135deg,#cce5ff,#b8daff);color:#004085;border:1px solid #b8daff}
+    .dipinjam{background:linear-gradient(135deg,#d4edda,#c3e6cb);color:#155724;border:1px solid #c3e6cb}
+    .dikembalikan{background:linear-gradient(135deg,#d1ecf1,#bee5eb);color:#0c5460;border:1px solid #bee5eb}
+    .ditolak{background:linear-gradient(135deg,#f8d7da,#f5c6cb);color:#721c24;border:1px solid #f5c6cb}
+    .terlambat{background:linear-gradient(135deg,#f5c6cb,#f1b0b7);color:#721c24;border:1px solid #f1b0b7}
+
+    .price{font-weight:700;color:#1a237e;font-size:13px}
+    .action-buttons{display:flex;justify-content:center;gap:4px;flex-wrap:nowrap}
+    .action-buttons .btn{padding:6px 10px;border-radius:6px;font-size:12px;transition:all .2s;border:none}
+    .action-buttons .btn:hover{transform:translateY(-1px);box-shadow:0 3px 8px rgba(0,0,0,.2)}
+    .btn-info{background:linear-gradient(135deg,#17a2b8,#138496);color:#fff}
+    .btn-success{background:linear-gradient(135deg,#28a745,#218838);color:#fff}
+    .btn-danger{background:linear-gradient(135deg,#dc3545,#c82333);color:#fff}
+    .btn-warning{background:linear-gradient(135deg,#ffc107,#e0a800);color:#212529}
+    .btn-primary{background:linear-gradient(135deg,#007bff,#0069d9);color:#fff}
+
+    .info-bar{padding:12px 20px;background:#f8f9fa;border-top:1px solid #e9ecef;font-size:13px;color:#6c757d}
+    .empty-state{padding:60px 20px;text-align:center}
+    .empty-state i{font-size:60px;color:#dee2e6;display:block}
+    .empty-state h5{color:#6c757d;margin-top:15px}
+
+    .modal-header{background:linear-gradient(135deg,#1a237e,#283593);color:#fff;border-radius:12px 12px 0 0;padding:18px 25px}
+    .modal-header .btn-close{filter:brightness(0) invert(1)}
+    .modal-content{border:none;border-radius:12px;overflow:hidden}
+    .modal-body{padding:25px}
+    .detail-row{display:flex;padding:12px 0;border-bottom:1px solid #f0f0f0}
+    .detail-row:last-child{border-bottom:none}
+    .detail-label{flex:0 0 160px;font-weight:600;color:#495057;font-size:14px}
+    .detail-value{flex:1;color:#212529;font-size:14px}
+    .detail-value.price{color:#1a237e;font-weight:700;font-size:16px}
+
+    .toast-container{position:fixed;top:20px;right:20px;z-index:9999}
+    .toast-custom{padding:15px 20px;border-radius:10px;color:#fff;margin-bottom:10px;box-shadow:0 4px 15px rgba(0,0,0,.2);animation:slideIn .3s ease;display:flex;align-items:center;gap:10px;min-width:300px}
+    .toast-custom.success{background:linear-gradient(135deg,#27ae60,#229954)}
+    .toast-custom.danger{background:linear-gradient(135deg,#dc3545,#c82333)}
+    .toast-custom.warning{background:linear-gradient(135deg,#f39c12,#e67e22)}
+    @keyframes slideIn{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}
+    @keyframes slideOut{from{transform:translateX(0);opacity:1}to{transform:translateX(100%);opacity:0}}
+
+    ::-webkit-scrollbar{width:8px;height:8px}
+    ::-webkit-scrollbar-track{background:#f1f1f1;border-radius:10px}
+    ::-webkit-scrollbar-thumb{background:#3498db;border-radius:10px}
+
+    @media(max-width:992px){
+        .sidebar{width:60px}
+        .sidebar:not(.collapsed){width:250px}
+        .main-content{margin-left:60px}
+        .sidebar:not(.collapsed)~.main-content{margin-left:250px}
+    }
+    @media(max-width:768px){
+        .main-content{margin-left:0!important;padding:15px 10px 50px}
+        .header-container{flex-direction:column;gap:15px;text-align:center}
+        .page-title{font-size:1.3rem}
+        .action-buttons{flex-direction:column;gap:4px}
+        .action-buttons .btn{width:100%;font-size:11px;padding:5px}
+        .detail-row{flex-direction:column;gap:4px}
+        .detail-label{flex:none;width:100%}
+    }
+</style>
+</head>
+<body>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<div class="sidebar" id="sidebar">
+    <div class="menu-toggle" onclick="toggleSidebar()">
+        <i class="bi bi-chevron-left" id="toggleIcon"></i>
+    </div>
+    <div class="sidebar-header">
+        <h3><i class="bi bi-tv me-2"></i>Peminjaman TV</h3>
+        <small>Sistem Management</small>
+    </div>
+    <div class="sidebar-menu">
+        <a href="index1.html" class="menu-item" id="menu-index"><i class="bi bi-speedometer2"></i><span>Dashboard</span></a>
+        <a href="databarang.html" class="menu-item" id="menu-databarang"><i class="bi bi-tv"></i><span>Data Barang</span></a>
+        <a href="peminjaman.html" class="menu-item" id="menu-datapeminjaman"><i class="bi bi-cart-check"></i><span>Peminjaman</span></a>
+        <a href="laporan.html" class="menu-item" onclick="showToast('danger','Halaman lain hanya tersedia di versi PHP')"><i class="bi bi-file-earmark-text"></i><span>Laporan</span></a>
+        <a href="manajemenuser.html" class="menu-item" onclick="showToast('danger','Halaman lain hanya tersedia di versi PHP')"><i class="bi bi-people"></i><span>Manajemen User</span></a>
+    </div>
+    <div class="user-info">
+        <div class="d-flex align-items-center">
+            <div class="user-avatar me-3">R</div>
+            <div class="user-details">
+                <h6>Rayhan Fadhil N</h6>
+                <small><span class="role-badge role-admin">Admin</span></small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="main-content" id="mainContent">
+    <div class="container-fluid">
+
+        <div class="header-container">
+            <div class="d-flex justify-content-between align-items-center">
+                <h2 class="page-title text-white mb-0"><i class="bi bi-cart-check me-2"></i>Data Peminjaman</h2>
+                <button class="btn btn-light" onclick="openAddModal()"><i class="bi bi-plus-circle me-1"></i>Tambah Peminjaman</button>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-body p-3">
+                <div class="row g-3 filter-form">
+                    <div class="col-md-6">
+                        <input type="text" class="form-control" id="searchInput" placeholder="Cari peminjam atau barang..." oninput="renderTable()">
+                    </div>
+                    <div class="col-md-4">
+                        <select class="form-select" id="statusFilter" onchange="renderTable()">
+                            <option value="">Semua Status</option>
+                            <option value="pending">Pending</option>
+                            <option value="disetujui">Disetujui</option>
+                            <option value="dipinjam">Dipinjam</option>
+                            <option value="dikembalikan">Dikembalikan</option>
+                            <option value="ditolak">Ditolak</option>
+                            <option value="terlambat">Terlambat</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <button class="btn w-100" onclick="renderTable()"><i class="bi bi-funnel me-1"></i>Filter</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>No</th><th>Peminjam</th><th>Barang</th><th>Tgl Pinjam</th><th>Jam</th><th>Durasi</th><th>Total Harga</th><th>Status</th><th>Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tableBody"></tbody>
+                    </table>
+                </div>
+                <div class="info-bar" id="infoBar"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- View Modal -->
+<div class="modal fade" id="viewModal" tabindex="-1"><div class="modal-dialog modal-lg"><div class="modal-content">
+    <div class="modal-header"><h5 class="modal-title"><i class="bi bi-info-circle me-2"></i>Detail Peminjaman</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body" id="viewContent"></div>
+    <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Tutup</button></div>
+</div></div></div>
+
+<!-- Add Modal -->
+<div class="modal fade" id="addModal" tabindex="-1"><div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable"><div class="modal-content">
+    <div class="modal-header"><h5 class="modal-title"><i class="bi bi-plus-circle me-2"></i>Tambah Peminjaman</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+    <form id="addForm" onsubmit="return addPeminjaman(event)">
+        <div class="modal-body">
+            <div class="row g-3">
+                <div class="col-md-12">
+                    <label class="form-label fw-bold"><i class="bi bi-person-fill me-1"></i>Peminjam <span class="text-danger">*</span></label>
+                    <select class="form-select" id="addUser" required><option value="" selected disabled>-- Pilih Peminjam --</option></select>
+                </div>
+                <div class="col-md-12">
+                    <label class="form-label fw-bold"><i class="bi bi-box-seam-fill me-1"></i>Barang <span class="text-danger">*</span></label>
+                    <select class="form-select" id="addBarang" required onchange="updateBarangInfo()"><option value="" selected disabled>-- Pilih Barang --</option></select>
+                    <div id="barangInfo" class="mt-2" style="display:none">
+                        <span class="badge bg-info"><span id="stokInfo"></span> | <span id="hargaInfo"></span></span>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label fw-bold"><i class="bi bi-calendar-plus-fill me-1"></i>Tanggal Pinjam <span class="text-danger">*</span></label>
+                    <input type="date" class="form-control" id="addTgl" required>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label fw-bold"><i class="bi bi-clock-fill me-1"></i>Jam Pinjam <span class="text-danger">*</span></label>
+                    <input type="time" class="form-control" id="addJam" required>
+                </div>
+                <div class="col-md-12">
+                    <label class="form-label fw-bold"><i class="bi bi-hourglass-split me-1"></i>Durasi (Jam) <span class="text-danger">*</span></label>
+                    <div class="d-flex gap-2 mb-2 flex-wrap">
+                        <button type="button" class="btn btn-sm btn-outline-primary" onclick="setDurasi(1)">1 Jam</button>
+                        <button type="button" class="btn btn-sm btn-outline-primary" onclick="setDurasi(2)">2 Jam</button>
+                        <button type="button" class="btn btn-sm btn-outline-primary" onclick="setDurasi(3)">3 Jam</button>
+                        <button type="button" class="btn btn-sm btn-outline-primary" onclick="setDurasi(6)">6 Jam</button>
+                        <button type="button" class="btn btn-sm btn-outline-primary" onclick="setDurasi(12)">12 Jam</button>
+                        <button type="button" class="btn btn-sm btn-outline-primary" onclick="setDurasi(24)">24 Jam</button>
+                    </div>
+                    <input type="number" class="form-control" id="addDurasi" min="1" value="1" required oninput="hitungTotal()">
+                </div>
+                <div class="col-md-12">
+                    <label class="form-label fw-bold"><i class="bi bi-calculator-fill me-1"></i>Total Harga</label>
+                    <div class="input-group">
+                        <span class="input-group-text" style="background:linear-gradient(135deg,#1a237e,#283593);color:#fff;border:none;border-radius:10px 0 0 10px">Rp</span>
+                        <input type="text" class="form-control" id="addTotalDisplay" value="0" readonly style="font-size:16px;font-weight:700;color:#1a237e">
+                        <input type="hidden" id="addTotal" value="0">
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+            <button type="submit" class="btn btn-primary"><i class="bi bi-save me-1"></i>Simpan</button>
+        </div>
+    </form>
+</div></div></div>
+
+<footer style="position:fixed;bottom:0;left:0;width:100%;background:linear-gradient(90deg,#5c47ff,#6a5cff);color:#fff;text-align:center;padding:8px 0;font-size:11px;z-index:999;box-shadow:0 -2px 10px rgba(0,0,0,.1)">
+    © 2026 Dibuat dengan <i class="fas fa-heart" style="color:#ff6b6b;margin:0 3px"></i> oleh <span class="fw-semibold">Rayhan Fadhil N</span>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+// ============================================================
+// DATA
+// ============================================================
+const BARANG=[
+    {id_barang:23,nama_barang:"TV 14 Inch",harga_per_jam:3000,stok:24},
+    {id_barang:24,nama_barang:"TV 21 Inch",harga_per_jam:4000,stok:24},
+    {id_barang:25,nama_barang:"TV 32 Inch",harga_per_jam:5000,stok:24},
+    {id_barang:26,nama_barang:"TV 42 Inch",harga_per_jam:7000,stok:25},
+    {id_barang:27,nama_barang:"TV 55 Inch",harga_per_jam:10000,stok:25},
+    {id_barang:28,nama_barang:"Remote TV Universal",harga_per_jam:2000,stok:25},
+    {id_barang:29,nama_barang:"Kabel HDMI 1.5m",harga_per_jam:2500,stok:24},
+    {id_barang:30,nama_barang:"Kabel HDMI 3m",harga_per_jam:3000,stok:24},
+    {id_barang:31,nama_barang:"Bracket TV 32-42 Inch",harga_per_jam:4000,stok:25},
+    {id_barang:32,nama_barang:"Bracket TV 50-65 Inch",harga_per_jam:5000,stok:25}
+];
+const USERS=[
+    {id_user:7,nama:"Peminjam Satu",username:"peminjam1"},
+    {id_user:8,nama:"Peminjam Dua",username:"peminjam2"},
+    {id_user:9,nama:"Peminjam Tiga",username:"peminjam3"},
+    {id_user:11,nama:"Andi Wijaya",username:"andi"},
+    {id_user:12,nama:"Budi Santoso",username:"budi"},
+    {id_user:13,nama:"Rizky Pratama",username:"rizky"},
+    {id_user:14,nama:"Dimas Saputra",username:"dimas"},
+    {id_user:15,nama:"Agus Setiawan",username:"agus"},
+    {id_user:16,nama:"Fajar Hidayat",username:"fajar"},
+    {id_user:17,nama:"Ilham Ramadhan",username:"ilham"},
+    {id_user:28,nama:"Taufik Hidayat",username:"taufik"},
+    {id_user:33,nama:"Bayu Aji",username:"bayu"},
+    {id_user:34,nama:"Surya Mahendra",username:"surya"}
+];
+const DEFAULT_PEMINJAMAN=[
+    {id_peminjaman:1,id_user:7,nama:"Peminjam Satu",id_barang:23,nama_barang:"TV 14 Inch",tanggal_pinjam:"2026-02-11",jam_pinjam:"08:00",durasi_jam:2,total_harga:8000,status:"dikembalikan",tanggal_kembali:"2026-02-11",jam_kembali:"10:00",created_at:"2026-02-11 02:53:21"},
+    {id_peminjaman:2,id_user:7,nama:"Peminjam Satu",id_barang:24,nama_barang:"TV 21 Inch",tanggal_pinjam:"2026-02-11",jam_pinjam:"02:00",durasi_jam:4,total_harga:4000,status:"dikembalikan",tanggal_kembali:"2026-02-11",jam_kembali:"06:00",created_at:"2026-02-11 03:00:46"},
+    {id_peminjaman:64,id_user:7,nama:"Peminjam Satu",id_barang:25,nama_barang:"TV 32 Inch",tanggal_pinjam:"2026-02-10",jam_pinjam:"08:00",durasi_jam:4,total_harga:16000,status:"dipinjam",tanggal_kembali:null,jam_kembali:null,created_at:"2026-02-12 01:34:18"},
+    {id_peminjaman:65,id_user:8,nama:"Peminjam Dua",id_barang:26,nama_barang:"TV 42 Inch",tanggal_pinjam:"2026-02-10",jam_pinjam:"09:00",durasi_jam:2,total_harga:16000,status:"dikembalikan",tanggal_kembali:"2026-02-10",jam_kembali:"11:00",created_at:"2026-02-12 01:34:18"},
+    {id_peminjaman:66,id_user:9,nama:"Peminjam Tiga",id_barang:23,nama_barang:"TV 14 Inch",tanggal_pinjam:"2026-02-11",jam_pinjam:"10:00",durasi_jam:3,total_harga:3000,status:"pending",tanggal_kembali:null,jam_kembali:null,created_at:"2026-02-12 01:34:18"},
+    {id_peminjaman:67,id_user:11,nama:"Andi Wijaya",id_barang:29,nama_barang:"Kabel HDMI 1.5m",tanggal_pinjam:"2026-02-11",jam_pinjam:"11:00",durasi_jam:3,total_harga:6000,status:"disetujui",tanggal_kembali:null,jam_kembali:null,created_at:"2026-02-12 01:34:18"},
+    {id_peminjaman:68,id_user:12,nama:"Budi Santoso",id_barang:26,nama_barang:"TV 42 Inch",tanggal_pinjam:"2026-02-12",jam_pinjam:"12:00",durasi_jam:3,total_harga:15000,status:"dikembalikan",tanggal_kembali:"2026-02-12",jam_kembali:"15:00",created_at:"2026-02-12 01:34:18"},
+    {id_peminjaman:73,id_user:12,nama:"Budi Santoso",id_barang:27,nama_barang:"TV 55 Inch",tanggal_pinjam:"2026-03-05",jam_pinjam:"14:00",durasi_jam:4,total_harga:20000,status:"dipinjam",tanggal_kembali:null,jam_kembali:null,created_at:"2026-02-12 01:44:34"},
+    {id_peminjaman:76,id_user:15,nama:"Agus Setiawan",id_barang:27,nama_barang:"TV 55 Inch",tanggal_pinjam:"2026-04-10",jam_pinjam:"10:00",durasi_jam:5,total_harga:45000,status:"terlambat",tanggal_kembali:"2026-04-11",jam_kembali:"18:00",created_at:"2026-02-12 01:44:34"},
+    {id_peminjaman:84,id_user:28,nama:"Taufik Hidayat",id_barang:23,nama_barang:"TV 14 Inch",tanggal_pinjam:"2026-03-03",jam_pinjam:"01:39",durasi_jam:1,total_harga:3000,status:"dipinjam",tanggal_kembali:null,jam_kembali:null,created_at:"2026-03-03 01:39:38"},
+    {id_peminjaman:85,id_user:16,nama:"Fajar Hidayat",id_barang:24,nama_barang:"TV 21 Inch",tanggal_pinjam:"2026-03-03",jam_pinjam:"01:42",durasi_jam:7,total_harga:28000,status:"ditolak",tanggal_kembali:null,jam_kembali:null,created_at:"2026-03-03 01:42:22"}
+];
+
+// ============================================================
+// STORAGE
+// ============================================================
+function getData(){
+    const d=localStorage.getItem('peminjaman_tv');
+    if(d)return JSON.parse(d);
+    localStorage.setItem('peminjaman_tv',JSON.stringify(DEFAULT_PEMINJAMAN));
+    return DEFAULT_PEMINJAMAN;
+}
+function saveData(arr){localStorage.setItem('peminjaman_tv',JSON.stringify(arr))}
+function getNextId(){const d=getData();if(!d.length)return 1;return Math.max(...d.map(x=>x.id_peminjaman))+1}
+function getBarang(){return BARANG}
+function getUsers(){return USERS}
+
+// ============================================================
+// SIDEBAR
+// ============================================================
+function toggleSidebar(){
+    const s=document.getElementById('sidebar'),m=document.getElementById('mainContent'),i=document.getElementById('toggleIcon');
+    s.classList.toggle('collapsed');m.classList.toggle('expanded');
+    i.className=s.classList.contains('collapsed')?'bi bi-chevron-right':'bi bi-chevron-left';
+    localStorage.setItem('sidebarCollapsed',s.classList.contains('collapsed'));
+}
+
+// ============================================================
+// TOAST
+// ============================================================
+function showToast(type,text){
+    const c=document.getElementById('toastContainer');
+    const icons={success:'bi-check-circle-fill',danger:'bi-exclamation-triangle-fill',warning:'bi-exclamation-circle-fill'};
+    const t=document.createElement('div');t.className='toast-custom '+type;
+    t.innerHTML='<i class="bi '+(icons[type]||'bi-info-circle-fill')+'" style="font-size:20px"></i><span>'+text+'</span>';
+    c.appendChild(t);setTimeout(()=>{t.style.animation='slideOut .3s ease forwards';setTimeout(()=>t.remove(),300)},3000);
+}
+
+// ============================================================
+// HELPER
+// ============================================================
+function esc(s){if(!s)return'';const d=document.createElement('div');d.textContent=s;return d.innerHTML}
+function formatRp(n){return(parseInt(n)||0).toLocaleString('id-ID')}
+function formatTgl(d){if(!d)return'-';const dt=new Date(d);return String(dt.getDate()).padStart(2,'0')+'/'+String(dt.getMonth()+1).padStart(2,'0')+'/'+dt.getFullYear()}
+function durasiText(h){h=parseInt(h)||0;if(h<=0)return'-';if(h>=24){const d=Math.floor(h/24),j=h%24;return d+' hari'+(j>0?' '+j+' jam':'')}return h+' jam'}
+function findById(id){return getData().find(d=>d.id_peminjaman===parseInt(id))}
+
+// ============================================================
+// RENDER TABLE
+// ============================================================
+function renderTable(){
+    const search=(document.getElementById('searchInput').value||'').toLowerCase();
+    const statusVal=document.getElementById('statusFilter').value;
+    let data=getData();
+    if(search)data=data.filter(d=>(d.nama||'').toLowerCase().includes(search)||(d.nama_barang||'').toLowerCase().includes(search)||(d.username||'').toLowerCase().includes(search));
+    if(statusVal)data=data.filter(d=>d.status===statusVal);
+    data.sort((a,b)=>new Date(b.created_at)-new Date(a.created_at));
+    const tbody=document.getElementById('tableBody');
+    document.getElementById('infoBar').innerHTML=data.length?'<i class="bi bi-info-circle me-1"></i>Menampilkan <strong>'+data.length+'</strong> data peminjaman':'';
+
+    if(!data.length){
+        tbody.innerHTML='<tr><td colspan="9"><div class="empty-state"><i class="bi bi-inbox"></i><h5>Tidak ada data peminjaman</h5><p class="text-muted">Data akan muncul setelah ada peminjaman baru</p></div></td></tr>';
+        return;
+    }
+    let html='';let no=1;
+    data.forEach(d=>{
+        const sc=d.status||'pending';const sl=sc.charAt(0).toUpperCase()+sc.slice(1);
+        let actions='<button class="btn btn-sm btn-info" onclick="viewPeminjaman('+d.id_peminjaman+')" title="Detail"><i class="bi bi-eye"></i></button>';
+        if(sc==='pending'){
+            actions+='<button class="btn btn-sm btn-success" onclick="approvePeminjaman('+d.id_peminjaman+')" title="Setujui"><i class="bi bi-check-lg"></i></button>';
+            actions+='<button class="btn btn-sm btn-danger" onclick="rejectPeminjaman('+d.id_peminjaman+')" title="Tolak"><i class="bi bi-x-lg"></i></button>';
+        }
+        if(sc==='disetujui')actions+='<button class="btn btn-sm btn-primary" onclick="startPinjam('+d.id_peminjaman+')" title="Mulai Pinjam"><i class="bi bi-play-fill"></i></button>';
+        if(sc==='dipinjam')actions+='<button class="btn btn-sm btn-warning" onclick="kembalikan('+d.id_peminjaman+')" title="Kembalikan"><i class="bi bi-arrow-return-left"></i></button>';
+
+        html+='<tr><td>'+(no++)+'</td><td>'+esc(d.nama)+'</td><td>'+esc(d.nama_barang)+'</td><td>'+formatTgl(d.tanggal_pinjam)+'</td><td>'+(d.jam_pinjam||'-')+'</td><td>'+durasiText(d.durasi_jam)+'</td><td class="price">Rp '+formatRp(d.total_harga)+'</td><td><span class="statuss-badge '+sc+'">'+sl+'</span></td><td><div class="action-buttons">'+actions+'</div></td></tr>';
+    });
+    tbody.innerHTML=html;
+}
+
+// ============================================================
+// VIEW
+// ============================================================
+function viewPeminjaman(id){
+    const d=findById(id);if(!d){showToast('danger','Data tidak ditemukan');return}
+    const sc=d.status||'pending';const sl=sc.charAt(0).toUpperCase()+sc.slice(1);
+    const br=getBarang().find(b=>b.id_barang===d.id_barang);
+    const hp=br?br.harga_per_jam:0;
+    let html='<div class="row"><div class="col-md-5 text-center mb-4"><div class="bg-light rounded d-flex align-items-center justify-content-center" style="height:250px"><div class="text-center"><i class="bi bi-box-seam text-muted" style="font-size:64px"></i><p class="text-muted mt-2">Tidak ada foto</p></div></div></div><div class="col-md-7"><h4 class="mb-3">'+esc(d.nama_barang)+'</h4>';
+    html+='<div class="detail-row"><span class="detail-label"><i class="bi bi-hash me-2"></i>ID Peminjaman</span><span class="detail-value">: '+d.id_peminjaman+'</span></div>';
+    html+='<div class="detail-row"><span class="detail-label"><i class="bi bi-person me-2"></i>Peminjam</span><span class="detail-value">: '+esc(d.nama)+'</span></div>';
+    html+='<div class="detail-row"><span class="detail-label"><i class="bi bi-calendar me-2"></i>Tanggal Pinjam</span><span class="detail-value">: '+formatTgl(d.tanggal_pinjam)+' '+(d.jam_pinjam||'')+'</span></div>';
+    if(d.tanggal_kembali)html+='<div class="detail-row"><span class="detail-label"><i class="bi bi-calendar-check me-2"></i>Tanggal Kembali</span><span class="detail-value">: '+formatTgl(d.tanggal_kembali)+' '+(d.jam_kembali||'')+'</span></div>';
+    html+='<div class="detail-row"><span class="detail-label"><i class="bi bi-clock me-2"></i>Durasi</span><span class="detail-value">: '+durasiText(d.durasi_jam)+'</span></div>';
+    html+='<div class="detail-row"><span class="detail-label"><i class="bi bi-tag me-2"></i>Harga/Jam</span><span class="detail-value">: Rp '+formatRp(hp)+'</span></div>';
+    html+='<div class="detail-row"><span class="detail-label"><i class="bi bi-cash-stack me-2"></i>Total Harga</span><span class="detail-value price">: Rp '+formatRp(d.total_harga)+'</span></div>';
+    html+='<div class="detail-row"><span class="detail-label"><i class="bi bi-info-circle me-2"></i>Status</span><span class="detail-value">: <span class="statuss-badge '+sc+'">'+sl+'</span></span></div>';
+    html+='<div class="detail-row"><span class="detail-label"><i class="bi bi-calendar-plus me-2"></i>Dibuat</span><span class="detail-value">: '+formatTgl(d.created_at)+'</span></div></div></div>';
+    document.getElementById('viewContent').innerHTML=html;
+    new bootstrap.Modal(document.getElementById('viewModal')).show();
+}
+
+// ============================================================
+// ACTION BUTTONS
+// ============================================================
+function approvePeminjaman(id){
+    if(!confirm('Setujui peminjaman ini?'))return;
+    let data=getData();const idx=data.findIndex(d=>d.id_peminjaman===id);
+    if(idx===-1||data[idx].status!=='pending'){showToast('warning','Hanya pending yang bisa disetujui');return}
+    data[idx].status='disetujui';saveData(data);
+    showToast('success','Peminjaman berhasil disetujui');renderTable();
+}
+function rejectPeminjaman(id){
+    if(!confirm('Tolak peminjaman ini?'))return;
+    let data=getData();const idx=data.findIndex(d=>d.id_peminjaman===id);
+    if(idx===-1||data[idx].status!=='pending'){showToast('warning','Hanya pending yang bisa ditolak');return}
+    data[idx].status='ditolak';saveData(data);
+    const br=getBarang().find(b=>b.id_barang===data[idx].id_barang);
+    if(br)br.stok=(br.stok||0)+1;
+    showToast('warning','Peminjaman ditolak');renderTable();
+}
+function startPinjam(id){
+    if(!confirm('Konfirmasi barang sudah dipinjam?'))return;
+    let data=getData();const idx=data.findIndex(d=>d.id_peminjaman===id);
+    if(idx===-1||data[idx].status!=='disetujui'){showToast('warning','Hanya disetujui yang bisa dimulai');return}
+    data[idx].status='dipinjam';saveData(data);
+    showToast('success','Barang sudah dipinjam');renderTable();
+}
+function kembalikan(id){
+    if(!confirm('Konfirmasi barang sudah dikembalikan?'))return;
+    let data=getData();const idx=data.findIndex(d=>d.id_peminjaman===id);
+    if(idx===-1||data[idx].status!=='dipinjam'){showToast('warning','Hanya dipinjam yang bisa dikembalikan');return}
+    const now=new Date();
+    const pinjam=new Date(data[idx].tanggal_pinjam+' '+(data[idx].jam_pinjam||'00:00'));
+    pinjam.setHours(pinjam.getHours()+(data[idx].durasi_jam||0));
+    let sc='dikembalikan';
+    if(now>pinjam)sc='terlambat';
+    data[idx].status=sc;
+    data[idx].tanggal_kembali=now.toISOString().slice(0,10);
+    data[idx].jam_kembali=String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
+    saveData(data);
+    const br=getBarang().find(b=>b.id_barang===data[idx].id_barang);
+    if(br)br.stok=(br.stok||0)+1;
+    showToast(sc==='terlambat'?'warning':'success',sc==='terlambat'?'Barang dikembalikan terlambat!':'Barang berhasil dikembalikan');
+    renderTable();
+}
+
+// ============================================================
+// ADD MODAL
+// ============================================================
+function openAddModal(){
+    const form=document.getElementById('addForm');form.reset();
+    document.getElementById('addTgl').value=new Date().toISOString().slice(0,10);
+    document.getElementById('addJam').value=String(new Date().getHours()).padStart(2,'0')+':'+String(new Date().getMinutes()).padStart(2,'0');
+    document.getElementById('addTotalDisplay').value='0';document.getElementById('addTotal').value='0';
+    document.getElementById('barangInfo').style.display='none';
+
+    const uSel=document.getElementById('addUser');uSel.innerHTML='<option value="" selected disabled>-- Pilih Peminjam --</option>';
+    getUsers().forEach(u=>{uSel.innerHTML+='<option value="'+u.id_user+'">'+esc(u.nama)+' ('+esc(u.username)+')</option>'});
+    const bSel=document.getElementById('addBarang');bSel.innerHTML='<option value="" selected disabled>-- Pilih Barang --</option>';
+    getBarang().forEach(b=>{if(b.stok>0)bSel.innerHTML+='<option value="'+b.id_barang+'" data-stok="'+b.stok+'" data-harga="'+b.harga_per_jam+'">'+esc(b.nama_barang)+' (Stok: '+b.stok+' | Rp '+formatRp(b.harga_per_jam)+'/jam)</option>'});
+    new bootstrap.Modal(document.getElementById('addModal')).show();
+}
+function updateBarangInfo(){
+    const sel=document.getElementById('addBarang');
+    const opt=sel.options[sel.selectedIndex];
+    if(!opt||!opt.value){document.getElementById('barangInfo').style.display='none';return}
+    document.getElementById('stokInfo').textContent='Stok: '+opt.dataset.stok;
+    document.getElementById('hargaInfo').textContent='Harga: Rp '+parseInt(opt.dataset.harga).toLocaleString('id-ID')+'/jam';
+    document.getElementById('barangInfo').style.display='inline-block';
+    hitungTotal();
+}
+function setDurasi(h){document.getElementById('addDurasi').value=h;hitungTotal()}
+function hitungTotal(){
+    const sel=document.getElementById('addBarang');
+    const opt=sel.options[sel.selectedIndex];
+    const dur=parseInt(document.getElementById('addDurasi').value)||0;
+    if(opt&&opt.value&&dur>0){
+        const t=parseInt(opt.dataset.harga)*dur;
+        document.getElementById('addTotalDisplay').value=formatRp(t);
+        document.getElementById('addTotal').value=t;
+    }else{document.getElementById('addTotalDisplay').value='0';document.getElementById('addTotal').value='0'}
+}
+function addPeminjaman(e){
+    e.preventDefault();
+    const uid=parseInt(document.getElementById('addUser').value);
+    const bid=parseInt(document.getElementById('addBarang').value);
+    const tgl=document.getElementById('addTgl').value;
+    const jam=document.getElementById('addJam').value;
+    const dur=parseInt(document.getElementById('addDurasi').value)||0;
+    const total=parseInt(document.getElementById('addTotal').value)||0;
+    if(!uid){showToast('danger','Pilih peminjam');return false}
+    if(!bid){showToast('danger','Pilih barang');return false}
+    if(dur<1){showToast('danger','Durasi minimal 1 jam');return false}
+    if(total<=0){showToast('danger','Total harga tidak valid');return false}
+    const user=getUsers().find(u=>u.id_user===uid);
+    const br=getBarang().find(b=>b.id_barang===bid);
+    if(!br||br.stok<=0){showToast('danger','Stok barang habis');return false}
+    br.stok--;
+    const data=getData();
+    data.push({id_peminjaman:getNextId(),id_user:uid,nama:user?user.nama:'-',id_barang:bid,nama_barang:br.nama_barang,tanggal_pinjam:tgl,jam_pinjam:jam,durasi_jam:dur,total_harga:total,status:'pending',tanggal_kembali:null,jam_kembali:null,created_at:new Date().toISOString().replace('T',' ').slice(0,19)});
+    saveData(data);
+    bootstrap.Modal.getInstance(document.getElementById('addModal')).hide();
+    showToast('success','Peminjaman berhasil ditambahkan');renderTable();return false;
+}
+
+// ============================================================
+// INIT
+// ============================================================
+document.addEventListener('DOMContentLoaded',function(){
+    if(localStorage.getItem('sidebarCollapsed')==='true'){
+        document.getElementById('sidebar').classList.add('collapsed');
+        document.getElementById('mainContent').classList.add('expanded');
+        document.getElementById('toggleIcon').className='bi bi-chevron-right';
+    }
+    if(window.innerWidth<=992){
+        document.getElementById('sidebar').classList.add('collapsed');
+        document.getElementById('mainContent').classList.add('expanded');
+        document.getElementById('toggleIcon').className='bi bi-chevron-right';
+    }
+    window.addEventListener('resize',function(){
+        if(window.innerWidth<=992){
+            document.getElementById('sidebar').classList.add('collapsed');
+            document.getElementById('mainContent').classList.add('expanded');
+            document.getElementById('toggleIcon').className='bi bi-chevron-right';
+        }
+    });
+    const page=window.location.pathname.split('/').pop()||'';
+    document.querySelectorAll('.menu-item').forEach(i=>i.classList.remove('active'));
+    const t=document.getElementById('menu-'+page.replace('.html',''));
+    if(t)t.classList.add('active');
+    renderTable();
+    document.querySelectorAll('.modal').forEach(m=>{m.addEventListener('hidden.bs.modal',function(){const f=this.querySelector('form');if(f)f.reset()})});
+});
+</script>
+</body>
+</html>

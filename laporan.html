@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Laporan Peminjaman TV</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+    <script src="https://code.jquery.com/jquery-3.6.0/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{background:#f5f5f5;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;overflow-x:hidden;padding-bottom:50px}
+
+    /* ===== SIDEBAR ===== */
+    .sidebar{position:fixed;top:0;left:0;height:100vh;width:200px;background:linear-gradient(180deg,#1a237e,#283593);color:#fff;transition:all .3s;z-index:1000;box-shadow:3px 0 10px rgba(0,0,0,.2);overflow-y:auto}
+    .sidebar.collapsed{width:60px}
+    .sidebar-header{padding:20px 15px;text-align:center;border-bottom:1px solid rgba(255,255,255,.1)}
+    .sidebar-header h3{font-size:1.1rem;margin:0;color:#fff;font-weight:600}
+    .sidebar-header small{font-size:.55rem;color:#bbdefb}
+    .sidebar.collapsed .sidebar-header h3,.sidebar.collapsed .sidebar-header small{display:none}
+    .sidebar-menu{padding:20px 0;height:calc(100vh - 180px);overflow-y:auto}
+    .sidebar-menu::-webkit-scrollbar{width:4px}
+    .sidebar-menu::-webkit-scrollbar-thumb{background:rgba(255,255,255,.2);border-radius:10px}
+    .menu-item{padding:12px 20px;display:flex;align-items:center;color:#e3f2fd;text-decoration:none;transition:all .3s;border-left:3px solid transparent;cursor:pointer}
+    .menu-item:hover,.menu-item.active{background:rgba(255,255,255,.1);color:#fff;border-left:3px solid #4fc3f7}
+    .menu-item i{width:30px;font-size:1.2rem}
+    .menu-item span{font-size:.9rem;transition:opacity .3s,width .3s}
+    .sidebar.collapsed .menu-item span{opacity:0;width:0;overflow:hidden}
+    .menu-toggle{position:absolute;top:20px;right:-15px;width:30px;height:30px;background:#283593;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#fff;box-shadow:0 2px 5px rgba(0,0,0,.2);border:2px solid #fff;z-index:1001}
+    .user-info{position:absolute;bottom:0;left:0;right:0;padding:15px;background:rgba(0,0,0,.2);border-top:1px solid rgba(255,255,255,.1)}
+    .user-avatar{width:40px;height:40px;border-radius:50%;background:#4fc3f7;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1.1rem;flex-shrink:0}
+    .user-details h6{margin:0;font-size:.85rem;color:#fff}
+    .user-details small{font-size:.7rem;color:#bbdefb}
+    .sidebar.collapsed .user-details{display:none}
+    .role-badge{font-size:.65rem;padding:2px 8px;border-radius:10px;text-transform:uppercase;display:inline-block;color:#fff}
+    .role-admin{background:#f44336}.role-petugas{background:#ff9800}.role-peminjam{background:#4caf50}
+
+    /* ===== MAIN CONTENT ===== */
+    .main-content{margin-left:200px;min-height:100vh;transition:all .3s;padding:25px 30px 50px;background:linear-gradient(135deg,#f8f9fa 0%,#e9ecef 100%)}
+    .main-content.expanded{margin-left:60px}
+    .container-fluid{padding:0;width:100%;max-width:100%;margin:0}
+
+    /* ===== PAGE TITLE ===== */
+    .page-title{color:#2c3e50;font-weight:700;margin-bottom:10px;font-size:1.8rem}
+
+    /* ===== REPORT CARDS ===== */
+    .report-card{border-radius:15px;border:none;transition:transform .3s,box-shadow .3s;background:#fff;overflow:hidden;position:relative;box-shadow:0 4px 20px rgba(0,0,0,.08);height:100%}
+    .report-card:hover{transform:translateY(-5px);box-shadow:0 10px 25px rgba(0,0,0,.15)}
+    .report-card::before{content:'';position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,#3498db,#2c3e50)}
+    .report-icon{width:60px;height:60px;border-radius:15px;display:flex;align-items:center;justify-content:center;font-size:28px;color:#fff;box-shadow:0 5px 15px rgba(0,0,0,.2)}
+    .text-muted.small.text-uppercase{font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:#888}
+
+    /* ===== STATUS BADGES ===== */
+    .statuss-badge{padding:5px 12px;border-radius:20px;font-size:12px;font-weight:600;display:inline-block;min-width:100px;text-align:center}
+    .statuss-dipinjam{background:linear-gradient(135deg,#fff3cd,#ffeaa7);color:#856404;border:1px solid #ffeeba}
+    .statuss-dikembalikan{background:linear-gradient(135deg,#d4edda,#c3e6cb);color:#155724;border:1px solid #b1dfbb}
+    .statuss-batal{background:linear-gradient(135deg,#f8d7da,#f5c6cb);color:#721c24;border:1px solid #f1b0b7}
+    .statuss-ditolak{background:linear-gradient(135deg,#f8d7da,#f5c6cb);color:#721c24;border:1px solid #f1b0b7}
+    .statuss-terlambat{background:linear-gradient(135deg,#f5c6cb,#f1b0b7);color:#721c24;border:1px solid #f1b0b7}
+    .statuss-pending{background:linear-gradient(135deg,#fff3cd,#ffeaa7);color:#856404;border:1px solid #ffeeba}
+    .statuss-disetujui{background:linear-gradient(135deg,#cce5ff,#b8daff);color:#004085;border:1px solid #b8daff}
+
+    /* ===== CARDS ===== */
+    .card{width:100%;border:none;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,.08);margin-bottom:20px;background:#fff;overflow:hidden;transition:all .3s}
+    .card:hover{transform:translateY(-2px);box-shadow:0 6px 25px rgba(0,0,0,.12)}
+    .card-header{background:linear-gradient(135deg,#f8f9fa,#e9ecef);border-bottom:2px solid #3498db;padding:15px 20px}
+    .card-header h5{margin:0;font-weight:600;color:#2c3e50;font-size:1rem}
+    .card-body{padding:20px}
+
+    /* ===== SUMMARY BOXES ===== */
+    .summary-box{padding:20px;border-radius:12px;transition:transform .2s;box-shadow:0 4px 15px rgba(0,0,0,.06)}
+    .summary-box:hover{transform:scale(1.02)}
+    .summary-box.dipinjam{background:linear-gradient(135deg,#fff3cd 0%,#ffeaa7 100%)}
+    .summary-box.dikembalikan{background:linear-gradient(135deg,#d4edda 0%,#b7e4c7 100%)}
+    .summary-box.batal{background:linear-gradient(135deg,#f8d7da 0%,#ffb3b3 100%)}
+    .summary-number{font-size:2.5rem;font-weight:700;margin:10px 0 0 0}
+    .summary-box.dipinjam .summary-number{color:#856404}
+    .summary-box.dikembalikan .summary-number{color:#155724}
+    .summary-box.batal .summary-number{color:#721c24}
+
+    /* ===== TABLE ===== */
+    .table-responsive{border-radius:12px;overflow:hidden;border:1px solid #e0e0e0;box-shadow:0 2px 10px rgba(0,0,0,.05)}
+    .table{width:100%;margin-bottom:0}
+    .table th{background:linear-gradient(135deg,#343a40,#212529);color:#fff;border:none;padding:14px 12px;font-weight:600;text-align:center;white-space:nowrap;font-size:13px}
+    .table td{padding:12px 10px;text-align:center;vertical-align:middle;border-bottom:1px solid #f0f0f0;font-size:13px}
+    .table td.text-start{text-align:left;font-weight:500;color:#333}
+    .table tbody tr:nth-child(even){background-color:#fafafa}
+    .table tbody tr:hover{background-color:#f0f7ff;transition:background-color .2s}
+
+    /* ===== EXPORT CARDS ===== */
+    .export-card{border-radius:15px;transition:all .3s ease-in-out;border:1px solid #f1f1f1;background:#fff;height:100%}
+    .export-card:hover{transform:translateY(-6px);box-shadow:0 10px 25px rgba(0,0,0,.08)}
+    .export-icon{font-size:3rem}
+    .export-card h6{margin-top:12px;font-weight:700}
+    .export-card p{color:#888;font-size:13px;margin-bottom:15px}
+    .export-card .btn{border-radius:10px;padding:10px 20px;font-weight:600;transition:all .3s}
+    .export-card .btn:hover{transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,.15)}
+    .btn-outline-danger:hover{background:#dc3545!important;color:#fff!important}
+    .btn-outline-success:hover{background:#28a745!important;color:#fff!important}
+    .btn-outline-primary:hover{background:#007bff!important;color:#fff!important}
+
+    /* ===== PRICE ===== */
+    .fw-bold.text-primary{color:#0d6efd}
+
+    /* ===== TOAST ===== */
+    .toast-container{position:fixed;top:20px;right:20px;z-index:9999}
+    .toast-custom{padding:15px 20px;border-radius:10px;color:#fff;margin-bottom:10px;box-shadow:0 4px 15px rgba(0,0,0,.2);animation:slideIn .3s ease;display:flex;align-items:center;gap:10px;min-width:300px}
+    .toast-custom.success{background:linear-gradient(135deg,#27ae60,#229954)}
+    .toast-custom.danger{background:linear-gradient(135deg,#dc3545,#c82333)}
+    @keyframes slideIn{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}
+    @keyframes slideOut{from{transform:translateX(0);opacity:1}to{transform:translateX(100%);opacity:0}}
+
+    /* ===== SCROLLBAR ===== */
+    ::-webkit-scrollbar{width:8px;height:8px}
+    ::-webkit-scrollbar-track{background:#f1f1f1;border-radius:10px}
+    ::-webkit-scrollbar-thumb{background:#3498db;border-radius:10px}
+    ::-webkit-scrollbar-thumb:hover{background:#2980b9}
+
+    /* ===== ANIMATION ===== */
+    @keyframes fadeInUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+    .report-card{animation:fadeInUp .5s ease forwards}
+
+    /* ===== PRINT ===== */
+    @media print{
+        .sidebar,.toast-container{display:none!important}
+        .main-content{margin-left:0!important;padding:20px!important;background:#fff}
+        .table th{background:#333!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    }
+
+    /* ===== RESPONSIVE ===== */
+    @media(max-width:992px){
+        .sidebar{width:60px}
+        .sidebar:not(.collapsed){width:250px}
+        .main-content{margin-left:60px}
+        .sidebar:not(.collapsed)~.main-content{margin-left:250px}
+        .menu-toggle{right:-12px}
+        .page-title{font-size:1.5rem}
+    }
+    @media(max-width:768px){
+        .main-content{margin-left:0!important;padding:15px 10px 50px}
+        .page-title{font-size:1.3rem}
+        .report-card::before{height:3px}
+        .report-icon{width:50px;height:50px;font-size:24px}
+        .summary-number{font-size:2rem}
+        .summary-box{padding:15px}
+        .export-card .btn{width:100%}
+    }
+    @media(max-width:576px){
+        .container-fluid{padding:0 10px}
+        .table th,.table td{padding:8px 6px;font-size:11px}
+        .statuss-badge{padding:4px 8px;font-size:10px;min-width:75px}
+        .summary-box.d-flex{flex-direction:column;gap:4px}
+        .export-icon{font-size:2rem}
+    }
+</style>
+</head>
+<body>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<div class="sidebar" id="sidebar">
+    <div class="menu-toggle" onclick="toggleSidebar()"><i class="bi bi-chevron-left" id="toggleIcon"></i></div>
+    <div class="sidebar-header"><h3><i class="bi bi-tv me-2"></i>Peminjaman TV</h3><small>Sistem Management</small></div>
+    <div class="sidebar-menu">
+        <a href="index.html" class="menu-item" id="menu-index"><i class="bi bi-speedometer2"></i><span>Dashboard</span></a>
+        <a href="databarang.html" class="menu-item" id="menu-databarang"><i class="bi bi-tv"></i><span>Data Barang</span></a>
+        <a href="peminjaman.html" class="menu-item" id="menu-datapeminjaman"><i class="bi bi-cart-check"></i><span>Peminjaman</span></a>
+        <a href="laporan.html" class="menu-item" id="menu-laporan"><i class="bi bi-file-earmark-text"></i><span>Laporan</span></a>
+        <a href="manajemenuser.html" class="menu-item" onclick="showToast('danger','Halaman lain hanya tersedia di versi PHP')"><i class="bi bi-people"></i><span>Manajemen User</span></a>
+    </div>
+    <div class="user-info"><div class="d-flex align-items-center"><div class="user-avatar me-3">R</div><div class="user-details"><h6>Rayhan Fadhil N</h6><small><span class="role-badge role-admin">Admin</span></small></div></div></div>
+</div>
+
+<div class="main-content" id="mainContent">
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="page-title"><i class="bi bi-file-earmark-text me-2" style="color:#3498db"></i>Laporan Peminjaman TV</h2>
+            <p class="text-muted mb-0"><i class="bi bi-calendar3 me-1"></i><span id="todayDate"></span> | <i class="bi bi-clock ms-2 me-1"></i><span id="currentTime"></span> WIB</p>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-3 col-sm-6 mb-3"><div class="card report-card"><div class="card-body"><div class="d-flex justify-content-between align-items-center"><div><span class="text-muted small text-uppercase">Peminjaman Bulan Ini</span><h3 class="mt-2 mb-0" id="statPinjam">0</h3></div><div class="report-icon" style="background:linear-gradient(135deg,#3498db,#2980b9)"><i class="bi bi-cart-check"></i></div></div></div></div></div>
+        <div class="col-md-3 col-sm-6 mb-3"><div class="card report-card"><div class="card-body"><div class="d-flex justify-content-between align-items-center"><div><span class="text-muted small text-uppercase">Pengembalian Bulan Ini</span><h3 class="mt-2 mb-0" id="statKembali">0</h3></div><div class="report-icon" style="background:linear-gradient(135deg,#27ae60,#229954)"><i class="bi bi-arrow-return-left"></i></div></div></div></div></div>
+        <div class="col-md-3 col-sm-6 mb-3"><div class="card report-card"><div class="card-body"><div class="d-flex justify-content-between align-items-center"><div><span class="text-muted small text-uppercase">Pendapatan Bulan Ini</span><h4 class="mt-2 mb-0 fw-bold text-primary" id="statPendapatan">Rp 0</h4></div><div class="report-icon" style="background:linear-gradient(135deg,#f39c12,#e67e22)"><i class="bi bi-cash-stack"></i></div></div></div></div></div>
+        <div class="col-md-3 col-sm-6 mb-3"><div class="card report-card"><div class="card-body"><div class="d-flex justify-content-between align-items-center"><div><span class="text-muted small text-uppercase">Total Peminjaman</span><h3 class="mt-2 mb-0" id="statTotal">0</h3></div><div class="report-icon" style="background:linear-gradient(135deg,#9b59b6,#8e44ad)"><i class="bi bi-clipboard-data"></i></div></div></div></div></div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-12"><div class="card"><div class="card-header"><h5 class="mb-0"><i class="bi bi-pie-chart me-2"></i>Ringkasan Status Peminjaman</h5></div><div class="card-body"><div class="row text-center g-3">
+            <div class="col-md-4"><div class="summary-box dipinjam"><i class="bi bi-arrow-right-circle" style="font-size:2rem;color:#856404"></i><h6 class="mt-2 mb-0 text-uppercase fw-semibold">Dipinjam</h6><p class="summary-number" id="sumDipinjam">0</p></div></div>
+            <div class="col-md-4"><div class="summary-box dikembalikan"><i class="bi bi-check-circle" style="font-size:2rem;color:#155724"></i><h6 class="mt-2 mb-0 text-uppercase fw-semibold">Dikembalikan</h6><p class="summary-number" id="sumDikembalikan">0</p></div></div>
+            <div class="col-md-4"><div class="summary-box batal"><i class="bi bi-x-circle" style="font-size:2rem;color:#721c24"></i><h6 class="mt-2 mb-0 text-uppercase fw-semibold">Batal</h6><p class="summary-number" id="sumBatal">0</p></div></div>
+        </div></div></div></div>
+    </div>
+
+    <div class="card shadow mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="bi bi-clock-history me-2"></i>10 Peminjaman Terakhir</h5>
+            <span class="badge bg-primary" id="tableCount">0 data</span>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover" id="peminjamanTable">
+                    <thead><tr><th>No</th><th>Peminjam</th><th>Barang</th><th>Tgl Pinjam</th><th>Jam Pinjam</th><th>Durasi</th><th>Total</th><th>Status</th><th>Aksi</th></tr></thead>
+                    <tbody id="tableBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow border-0 rounded-4">
+        <div class="card-header bg-white border-0 py-3"><h5 class="mb-0 fw-semibold"><i class="bi bi-download me-2"></i>Export Laporan Peminjaman</h5></div>
+        <div class="card-body">
+            <div class="row g-4">
+                <div class="col-md-4 col-sm-6"><div class="export-card p-4 text-center bg-white h-100"><i class="bi bi-file-pdf text-danger export-icon"></i><h6 class="mt-3 fw-bold">Export ke PDF</h6><p class="text-muted small">Laporan dalam format PDF</p><button onclick="exportToPDF()" class="btn btn-outline-danger w-100"><i class="bi bi-file-earmark-pdf me-1"></i>Download PDF</button></div></div>
+                <div class="col-md-4 col-sm-6"><div class="export-card p-4 text-center bg-white h-100"><i class="bi bi-file-excel text-success export-icon"></i><h6 class="mt-3 fw-bold">Export ke Excel</h6><p class="text-muted small">Laporan dalam format Excel</p><button onclick="exportToExcel()" class="btn btn-outline-success w-100"><i class="bi bi-file-earmark-spreadsheet me-1"></i>Download Excel</button></div></div>
+                <div class="col-md-4 col-sm-12"><div class="export-card p-4 text-center bg-white h-100"><i class="bi bi-printer text-primary export-icon"></i><h6 class="mt-3 fw-bold">Cetak Semua</h6><p class="text-muted small">Cetak semua laporan</p><button onclick="printSemuaLaporan()" class="btn btn-outline-primary w-100"><i class="bi bi-printer me-1"></i>Cetak Semua</button></div></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<footer style="position:fixed;bottom:0;left:0;width:100%;background:linear-gradient(90deg,#5c47ff,#6a5cff);color:#fff;text-align:center;padding:8px 0;font-size:11px;z-index:999;box-shadow:0 -2px 10px rgba(0,0,0,.1)">
+    © 2026 Dibuat dengan <i class="fas fa-heart" style="color:#ff6b6b;margin:0 3px"></i> oleh <span class="fw-semibold">Rayhan Fadhil N</span>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+const PEMINJAMAN=[
+    {id_peminjaman:1,id_user:7,nama_peminjam:"Peminjam Satu",username:"peminjam1",id_barang:23,nama_barang:"TV 14 Inch",tanggal_pinjam:"2026-02-11",jam_pinjam:"08:00",durasi_jam:2,total_harga:8000,status:"dikembalikan",tanggal_kembali:"2026-02-11",jam_kembali:"10:00",harga_per_jam:3000,created_at:"2026-02-11 02:53:21"},
+    {id_peminjaman:2,id_user:7,nama_peminjam:"Peminjam Satu",username:"peminjam1",id_barang:24,nama_barang:"TV 21 Inch",tanggal_pinjam:"2026-02-11",jam_pinjam:"02:00",durasi_jam:4,total_harga:4000,status:"dikembalikan",tanggal_kembali:"2026-02-11",jam_kembali:"06:00",harga_per_jam:4000,created_at:"2026-02-11 03:00:46"},
+    {id_peminjaman:64,id_user:7,nama_peminjam:"Peminjam Satu",username:"peminjam1",id_barang:25,nama_barang:"TV 32 Inch",tanggal_pinjam:"2026-02-10",jam_pinjam:"08:00",durasi_jam:4,total_harga:16000,status:"dipinjam",tanggal_kembali:null,jam_kembali:null,harga_per_jam:5000,created_at:"2026-02-12 01:34:18"},
+    {id_peminjaman:65,id_user:8,nama_peminjam:"Peminjam Dua",username:"peminjam2",id_barang:26,nama_barang:"TV 42 Inch",tanggal_pinjam:"2026-02-10",jam_pinjam:"09:00",durasi_jam:2,total_harga:16000,status:"dikembalikan",tanggal_kembali:"2026-02-10",jam_kembali:"11:00",harga_per_jam:7000,created_at:"2026-02-12 01:34:18"},
+    {id_peminjaman:66,id_user:9,nama_peminjam:"Peminjam Tiga",username:"peminjam3",id_barang:23,nama_barang:"TV 14 Inch",tanggal_pinjam:"2026-02-11",jam_pinjam:"10:00",durasi_jam:3,total_harga:3000,status:"dipinjam",tanggal_kembali:null,jam_kembali:null,harga_per_jam:3000,created_at:"2026-02-12 01:34:18"},
+    {id_peminjaman:67,id_user:11,nama_peminjam:"Andi Wijaya",username:"andi",id_barang:29,nama_barang:"Kabel HDMI 1.5m",tanggal_pinjam:"2026-02-11",jam_pinjam:"11:00",durasi_jam:3,total_harga:6000,status:"dikembalikan",tanggal_kembali:"2026-02-11",jam_kembali:"14:00",harga_per_jam:2500,created_at:"2026-02-12 01:34:18"},
+    {id_peminjaman:68,id_user:12,nama_peminjam:"Budi Santoso",username:"budi",id_barang:26,nama_barang:"TV 42 Inch",tanggal_pinjam:"2026-02-12",jam_pinjam:"12:00",durasi_jam:3,total_harga:15000,status:"dikembalikan",tanggal_kembali:"2026-02-12",jam_kembali:"15:00",harga_per_jam:7000,created_at:"2026-02-12 01:34:18"},
+    {id_peminjaman:73,id_user:12,nama_peminjam:"Budi Santoso",username:"budi",id_barang:27,nama_barang:"TV 55 Inch",tanggal_pinjam:"2026-03-05",jam_pinjam:"14:00",durasi_jam:4,total_harga:20000,status:"dipinjam",tanggal_kembali:null,jam_kembali:null,harga_per_jam:10000,created_at:"2026-02-12 01:44:34"},
+    {id_peminjaman:76,id_user:15,nama_peminjam:"Agus Setiawan",username:"agus",id_barang:27,nama_barang:"TV 55 Inch",tanggal_pinjam:"2026-04-10",jam_pinjam:"10:00",durasi_jam:5,total_harga:45000,status:"terlambat",tanggal_kembali:"2026-04-11",jam_kembali:"18:00",harga_per_jam:10000,created_at:"2026-02-12 01:44:34"},
+    {id_peminjaman:84,id_user:28,nama_peminjam:"Taufik Hidayat",username:"taufik",id_barang:23,nama_barang:"TV 14 Inch",tanggal_pinjam:"2026-03-03",jam_pinjam:"01:39",durasi_jam:1,total_harga:3000,status:"dipinjam",tanggal_kembali:null,jam_kembali:null,harga_per_jam:3000,created_at:"2026-03-03 01:39:38"},
+    {id_peminjaman:85,id_user:16,nama_peminjam:"Fajar Hidayat",username:"fajar",id_barang:24,nama_barang:"TV 21 Inch",tanggal_pinjam:"2026-03-03",jam_pinjam:"01:42",durasi_jam:7,total_harga:28000,status:"ditolak",tanggal_kembali:null,jam_kembali:null,harga_per_jam:4000,created_at:"2026-03-03 01:42:22"}
+];
+
+const BULAN_FULL=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+const HARI_FULL=['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
+
+function toggleSidebar(){
+    const s=document.getElementById('sidebar'),m=document.getElementById('mainContent'),i=document.getElementById('toggleIcon');
+    s.classList.toggle('collapsed');m.classList.toggle('expanded');
+    i.className=s.classList.contains('collapsed')?'bi bi-chevron-right':'bi bi-chevron-left';
+    localStorage.setItem('sidebarCollapsed',s.classList.contains('collapsed'));
+}
+function showToast(t,txt){const c=document.getElementById('toastContainer');if(!c){const d=document.createElement('div');d.id='toastContainer';d.style.css='position:fixed;top:20px;right:20px;z-index:9999';document.body.appendChild(d)}const e=document.createElement('div');e.style.css='padding:15px 20px;border-radius:10px;color:#fff;margin-bottom:10px;box-shadow:0 4px 15px rgba(0,0,0,.2);display:flex;align-items:center;gap:10px;min-width:300px;animation:slideIn .3s ease';e.className.background='linear-gradient(135deg,'+(t==='success'?'#27ae60,#229954':'#dc3545,#c82333')+')';e.innerHTML='<i class="bi '+(t==='success'?'bi-check-circle-fill':'bi-exclamation-triangle-fill')+'" style="font-size:20px"></i><span>'+txt+'</span>';c.appendChild(e);setTimeout(()=>{e.style.animation='slideOut .3s ease forwards';setTimeout(()=>e.remove(),300)},3000)}
+function formatTgl(d){if(!d)return'-';const dt=new Date(d);return dt.getDate()+' '+BULAN_FULL[dt.getMonth()]+' '+dt.getFullYear()}
+function formatRp(n){return(parseInt(n)||0).toLocaleString('id-ID')}
+function durasiText(h){h=parseInt(h)||0;if(h<=0)return'-';if(h>=24){return Math.floor(h/24)+' hari '+(h%24>0?h%24+' jam':'')}return h+' jam'}
+
+function calcStats(){
+    const now=new Date(),cm=now.getMonth(),cy=now.getFullYear();
+    let pinjam=0,kembali=0,pendapatan=0,dipinjamSt=0,selesaiSt=0,batalSt=0;
+    PEMINJAMAN.forEach(p=>{
+        const pd=new Date(p.tanggal_pinjam);if(pd.getMonth()===cm&&pd.getFullYear()===cy)pinjam++;
+        if(p.status==='dikembalikan'&&p.tanggal_kembali){const kd=new Date(p.tanggal_kembali);if(kd.getMonth()===cm&&kd.getFullYear()===cy){kembali++;pendapatan+=p.total_harga||0}}
+        if(p.status==='dipinjam')dipinjamSt++;if(p.status==='dikembalikan'||p.status==='selesai')selesaiSt++;if(p.status==='batal')batalSt++;
+    });
+    document.getElementById('statPinjam').textContent=pinjam;
+    document.getElementById('statKembali').textContent=kembali;
+    document.getElementById('statPendapatan').textContent='Rp '+formatRp(pendapatan);
+    document.getElementById('statTotal').textContent=dipinjamSt+selesaiSt+batalSt;
+    document.getElementById('sumDipinjam').textContent=dipinjamSt;
+    document.getElementById('sumDikembalikan').textContent=selesaiSt;
+    document.getElementById('sumBatal').textContent=batalSt;
+}
+
+function renderTable(){
+    const sorted=[...PEMINJAMAN].sort((a,b)=>new Date(b.created_at)-new Date(a.created_at)).slice(0,10);
+    document.getElementById('tableCount').textContent=sorted.length+' data';
+    const statusMap={dipinjam:'background:linear-gradient(135deg,#fff3cd,#ffeaa7);color:#856404;border:1px solid #ffeeba',dikembalikan:'background:linear-gradient(135deg,#d4edda,#c3e6cb);color:#155724;border:1px solid #b1dfbb',batal:'background:linear-gradient(135deg,#f8d7da,#f5c6cb);color:#721c24;border:1px solid #f1b0b7',ditolak:'background:linear-gradient(135deg,#f8d7da,#f5c6cb);color:#721c24;border:1px solid #f1b0b7',terlambat:'background:linear-gradient(135deg,#f5c6cb,#f1b0b7);color:#721c24;border:1px solid #f1b0b7',pending:'background:linear-gradient(135deg,#fff3cd,#ffeaa7);color:#856404;border:1px solid #ffeeba',disetujui:'background:linear-gradient(135deg,#cce5ff,#b8daff);color:#004085;border:1px solid #b8daff'};
+    let html='';let no=1;
+    if(!sorted.length){html='<tr><td colspan="9" class="text-center py-5"><i class="bi bi-inbox text-muted" style="font-size:48px;display:block"></i><p class="mt-3 text-muted">Belum ada data peminjaman</p></td></tr>'}
+    sorted.forEach(p=>{
+        html+='<tr><td>'+(no++)+'</td><td class="text-start">'+esc(p.nama_peminjam)+'</td><td>'+esc(p.nama_barang)+'</td><td>'+formatTgl(p.tanggal_pinjam)+'</td><td>'+(p.jam_pinjam||'-')+'</td><td>'+durasiText(p.durasi_jam)+'</td><td class="fw-bold text-primary">Rp '+formatRp(p.total_harga)+'</td><td><span class="statuss-badge '+(p.status||'pending')+'" style="'+(statusMap[p.status]||'')+'">'+esc(p.status)+'</span></td><td><button class="btn btn-sm btn-outline-primary" onclick="printStrukById('+p.id_peminjaman+')" title="Cetak Struk"><i class="bi bi-receipt"></i> Struk</button></td></tr>';
+    });
+    document.getElementById('tableBody').innerHTML=html;
+}
+
+function printStrukById(id){
+    const p=PEMINJAMAN.find(d=>d.id_peminjaman===id);if(!p){showToast('danger','Data tidak ditemukan');return}
+    let tgl=formatTgl(p.tanggal_pinjam);if(p.jam_pinjam)tgl+=' '+p.jam_pinjam+' WIB';
+    const sm={dipinjam:{t:'SEDANG DIPINJAM',b:'#fff3cd',c:'#856404'},dikembalikan:{t:'SUDAH DIKEMBALIKAN',b:'#d4edda',c:'#155724'},batal:{t:'DIBATALKAN',b:'#f8d7da',c:'#721c24'},ditolak:{t:'DITOLAK',b:'#f8d7da',c:'#721c24'},terlambat:{t:'DIKEMBALIKAN TERLAMBAT',b:'#f5c6cb',c:'#721c24'},pending:{t:'MENUNGGU PERSETUJUAN',b:'#fff3cd',c:'#856404'},disetujui:{t:'DISETUJUI',b:'#cce5ff',c:'#004085'}};
+    const s=sm[p.status]||{t:(p.status||'UNKNOWN').toUpperCase(),b:'#e2e3e5',c:'#383d41'};
+    let kb='';
+    if(p.tanggal_kembali)kb='<div style="margin-bottom:8px;padding:6px 0;border-bottom:1px dotted #ccc;display:flex;justify-content:space-between"><span style="font-weight:bold">Tgl Kembali</span><span>'+formatTgl(p.tanggal_kembali)+' '+(p.jam_kembali||'')+' WIB</span></div>';
+    const w=window.open('','_blank','width=400,height=700');
+    w.document.write('<html><head><title>Struk #'+p.id_peminjaman+'</title><style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:"Courier New",monospace;width:80mm;margin:0 auto;padding:10px;font-size:12px;background:#fff}.header{text-align:center;margin-bottom:15px;padding-bottom:10px;border-bottom:2px dashed #333}.header h2{font-size:18px;margin-bottom:5px}.header p{font-size:10px;color:#666}.header .struk-no{font-size:14px;font-weight:bold;margin-top:5px}.divider{border:none;border-top:2px dashed #333;margin:15px 0}.total-row{display:flex;justify-content:space-between;padding:10px 5px;font-weight:bold;font-size:16px}.footer{text-align:center;margin-top:20px;padding-top:10px;border-top:2px dashed #333;font-size:10px;color:#666}.footer .thanks{font-size:12px;font-weight:bold;margin-bottom:5px}.print-btn{display:block;width:100%;padding:12px;margin-top:20px;background:#3498db;color:#fff;border:none;border-radius:5px;cursor:pointer;font-size:14px;font-weight:bold}.print-btn:hover{background:#2980b9}@media print{.print-btn{display:none}body{width:100%}}</style></head><body><div class="header"><h2>📺 RENTAL TV</h2><p>Jl. Bangunapan No. 123 | Telp: 0823 2948 0664</p><hr style="border:1px dashed #999;margin:8px 0"><div class="struk-no">STRUK #'+String(p.id_peminjaman).padStart(6,'0')+'</div><p>'+new Date().toLocaleString('id-ID')+'</p></div><div style="margin-bottom:8px;padding:6px 0;border-bottom:1px dotted #ccc;display:flex;justify-content:space-between"><span style="font-weight:bold">Peminjam</span><span>'+esc(p.nama_peminjam)+' ('+esc(p.username)+')</span></div>'+kb+'<hr class="divider"><table style="width:100%;margin:15px 0;border-collapse:collapse"><tr><th style="text-align:left;background:#f5f5f5;font-weight:bold;padding:8px 4px;border-bottom:1px solid #ddd;font-size:11px">Barang</th><th style="text-align:left;background:#f5f5f5;font-weight:bold;padding:8px 4px;border-bottom:1px solid #ddd;font-size:11px">Harga/Jam</th><th style="text-align:left;background:#f5f5f5;font-weight:bold;padding:8px 4px;border-bottom:1px solid #ddd;font-size:11px">Durasi</th><th style="text-align:right;background:#f5f5f5;font-weight:bold;padding:8px 4px;border-bottom:1px solid #ddd;font-size:11px">Subtotal</th></tr><tr><td style="padding:8px 4px;border-bottom:1px solid #ddd;font-size:11px">'+esc(p.nama_barang)+'</td><td style="padding:8px 4px;border-bottom:1px solid #ddd;font-size:11px">Rp '+formatRp(p.harga_per_jam)+'</td><td style="padding:8px 4px;border-bottom:1px solid #ddd;font-size:11px">'+p.durasi_jam+' jam</td><td style="padding:8px 4px;border-bottom:1px solid #ddd;font-size:11px;text-align:right">Rp '+formatRp(p.total_harga)+'</td></tr></table><hr class="divider"><div style="margin-bottom:8px;padding:6px 0;border-bottom:1px dotted #ccc;display:flex;justify-content:space-between"><span style="font-weight:bold">Tgl Pinjam</span><span>'+tgl+'</span></div><div style="text-align:center;margin:15px 0;padding:10px;background:'+s.b+';border-radius:5px;font-weight:bold;color:'+s.c+';font-size:13px">'+s.t+'</div><div class="footer"><div class="thanks">★ TERIMA KASIH ★</div><p>Barang wajib dikembalikan tepat waktu</p><p>Kerusakan/kehilangan menjadi tanggung jawab peminjam</p></div><button class="print-btn" onclick="window.print();setTimeout(function(){window.close()},1000)">🖨️ CETAK STRUK</button></body></html>');
+    w.document.close();
+}
+
+function exportToExcel(){
+    const t=document.getElementById('peminjamanTable');if(!t){showToast('danger','Tabel tidak ditemukan');return}
+    const c=t.cloneNode(true);c.querySelectorAll('tr').forEach(r=>{if(r.cells.length>0)r.deleteCell(r.cells.length-1)});
+    const wb=XLSX.utils.table_to_book(c,{sheet:'Laporan Peminjaman'});XLSX.writeFile(wb,'laporan_peminjaman_'+new Date().toISOString().slice(0,10)+'.xlsx');
+    showToast('success','Export Excel berhasil');
+}
+
+function exportToPDF(){
+    if(typeof window.jspdf==='undefined'){showToast('danger','Library PDF belum dimuat');return}
+    try{
+        const{jsPDF}=window.jspdf;const doc=new jsPDF('landscape');
+        doc.setFontSize(18);doc.setFont(undefined,'bold');doc.text('LAPORAN PEMINJAMAN TV',14,15);
+        doc.setFontSize(10);doc.setFont(undefined,'normal');doc.text('Tanggal Cetak: '+new Date().toLocaleDateString('id-ID',{weekday:'long',year:'numeric',month:'long',day:'numeric'}),14,22);
+        doc.setDrawColor(52,152,219);doc.setLineWidth(0.5);doc.line(14,25,283,25);
+        const t=document.getElementById('peminjamanTable');if(!t)return;
+        const h=[],hc=t.querySelectorAll('thead th');for(let i=0;i<hc.length-1;i++)h.push(hc[i].innerText);
+        const b=[],rows=t.querySelectorAll('tbody tr');
+        for(let i=0;i<rows.length;i++){if(rows[i].innerText.includes('Belum ada data'))continue;const rd=[],cells=rows[i].querySelectorAll('td');for(let j=0;j<cells.length-1;j++)rd.push(cells[j].innerText.trim());if(rd.length>0)b.push(rd)}
+        doc.autoTable({head:[h],body:b,startY:30,styles:{fontSize:9,cellPadding:5},headStyles:{fillColor:[41,128,185],textColor:[255,255,255],fontStyle:'bold'},alternateRowStyles:{fillColor:[248,249,250]},columnStyles:{0:{halign:'center',cellWidth:15},6:{halign:'right'}}});
+        const pc=doc.internal.getNumberOfPages();for(let i=1;i<=pc;i++){doc.setPage(i);doc.setFontSize(8);doc.setTextColor(128);doc.text('Halaman '+i+' dari '+pc,14,doc.internal.pageSize.height-10)}
+        doc.save('laporan_peminjaman_'+new Date().toISOString().slice(0,10)+'.pdf');
+        showToast('success','Export PDF berhasil');
+    }catch(e){showToast('danger','Error: '+e.message)}
+}
+
+function printSemuaLaporan(){
+    const t=document.getElementById('peminjamanTable');if(!t){showToast('danger','Tabel tidak ditemukan');return}
+    const c=t.cloneNode(true);c.querySelectorAll('tr').forEach(r=>{if(r.cells.length>0)r.deleteCell(r.cells.length-1)});
+    const tgl=new Date().toLocaleDateString('id-ID',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+    const w=window.open('','_blank');
+    w.document.write('<html><head><title>Cetak Laporan</title><style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:Arial,sans-serif;padding:20px;font-size:12px}.header{text-align:center;margin-bottom:20px;padding-bottom:15px;border-bottom:3px double #333}.header h1{font-size:20px;margin-bottom:5px}.header p{color:#666}table{width:100%;border-collapse:collapse;margin-top:20px}th,td{border:1px solid #ccc;padding:10px 8px;text-align:center}th{background:#343a40;color:#fff;font-weight:bold}tr:nth-child(even){background:#f8f9fa}.footer{text-align:center;margin-top:30px;padding-top:15px;border-top:2px solid #ccc;font-size:11px;color:#666}.print-btn{display:block;margin:20px auto;padding:12px 30px;background:#3498db;color:#fff;border:none;border-radius:5px;cursor:pointer;font-size:14px}@media print{.print-btn{display:none}}</style></head><body><div class="header"><h1>LAPORAN PEMINJAMAN TV</h1><p>Tanggal Cetak: '+tgl+'</p></div>'+c.outerHTML+'<div class="footer"><p>Dokumen ini dicetak dari sistem Rental TV</p><p>© '+new Date().getFullYear()+' Rental TV - Rayhan Fadhil N</p></div><button class="print-btn" onclick="window.print()">🖨️ CETAK LAPORAN</button></body></html>');
+    w.document.close();
+}
+
+function updateClock(){
+    const n=new Date();const el=document.getElementById('currentTime');
+    if(el)el.textContent=String(n.getHours()).padStart(2,'0')+':'+String(n.getMinutes()).padStart(2,'0')+':'+String(n.getSeconds()).padStart(2,'0');
+}
+
+document.addEventListener('DOMContentLoaded',function(){
+    const now=new Date();
+    document.getElementById('todayDate').textContent=HARI_FULL[now.getDay()]+', '+now.getDate()+' '+BULAN_FULL[now.getMonth()]+' '+now.getFullYear();
+    if(localStorage.getItem('sidebarCollapsed')==='true'){document.getElementById('sidebar').classList.add('collapsed');document.getElementById('mainContent').classList.add('expanded');document.getElementById('toggleIcon').className='bi bi-chevron-right'}
+    if(window.innerWidth<=992){document.getElementById('sidebar').classList.add('collapsed');document.getElementById('mainContent').classList.add('expanded');document.getElementById('toggleIcon').className='bi bi-chevron-right'}
+    window.addEventListener('resize',function(){if(window.innerWidth<=992){document.getElementById('sidebar').classList.add('collapsed');document.getElementById('mainContent').classList.add('expanded');document.getElementById('toggleIcon').className='bi bi-chevron-right'}});
+    const page=window.location.pathname.split('/').pop()||'';document.querySelectorAll('.menu-item').forEach(i=>i.classList.remove('active'));
+    const t=document.getElementById('menu-'+page.replace('.html',''));if(t)t.classList.add('active');
+    calcStats();renderTable();setInterval(updateClock,1000);
+});
+</script>
+</body>
+</html>
